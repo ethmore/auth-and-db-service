@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"e-comm/authService/dotEnv"
+	"e-comm/authService/mongodb"
 	"e-comm/authService/postgresql"
 
 	"github.com/gin-contrib/cors"
@@ -11,6 +12,9 @@ import (
 )
 
 func main() {
+	go postgresql.Connect()
+	go mongodb.Connect()
+
 	router := gin.Default()
 
 	config := cors.DefaultConfig()
@@ -92,7 +96,7 @@ func main() {
 
 		ctx.JSON(200, `message: "OK-Success"`)
 		if password == passwordAgain {
-			checkedMail := postgresql.GetUser(email)
+			checkedMail := mongodb.FindOneUser(email)
 			if checkedMail == email {
 				fmt.Println("User Already Registered")
 			} else {
@@ -105,7 +109,7 @@ func main() {
 				match := CheckPasswordHash(saltedPassword, hash)
 				fmt.Println("Match:   ", match)
 
-				postgresql.InsertUser(name, surname, email, hash)
+				mongodb.InsertOneUser(name, surname, email, hash)
 			}
 
 		} else {
@@ -114,6 +118,5 @@ func main() {
 
 	})
 
-	go postgresql.Connect()
 	router.Run(":3002")
 }
