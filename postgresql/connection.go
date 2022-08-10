@@ -12,15 +12,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var db *sql.DB
+var err error
+
 var lock = &sync.Mutex{}
+var singleInstance *single
 
 type single struct {
 }
-
-var singleInstance *single
-
-var db *sql.DB
-var err error
 
 func CheckError(err error) {
 	if err != nil {
@@ -38,30 +37,18 @@ func Connect() *single {
 			user := dotEnv.GoDotEnvVariable("USER")
 			password := dotEnv.GoDotEnvVariable("PASSWORD")
 			dbname := dotEnv.GoDotEnvVariable("DBNAME")
-
-			fmt.Println("Creating PostgreSQL connection.")
-
-			// connection string
-
 			intPort, _ := strconv.Atoi(port)
 			psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, intPort, user, password, dbname)
-			// open database
+
 			db, err = sql.Open("postgres", psqlconn)
 			CheckError(err)
-
-			// check db
-			err = db.Ping()
-			CheckError(err)
-
-			fmt.Println("Connected!")
-
 			singleInstance = &single{}
+			fmt.Println("PostgreSQL Connected!")
 		} else {
 			fmt.Println("PostgreSQL connection already created.")
 		}
 	} else {
 		fmt.Println("PostgreSQL connection already created.")
 	}
-
 	return singleInstance
 }
