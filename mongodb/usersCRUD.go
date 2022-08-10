@@ -2,39 +2,38 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func InsertOneUser(name, surname, email, password string) {
+func InsertOneUser(name, surname, email, password string) int {
 	coll := client.Database("eCommUsers").Collection("users")
 	doc := bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "email", Value: email}, {Key: "password", Value: password}}
-	result, err := coll.InsertOne(context.TODO(), doc)
+	_, err := coll.InsertOne(context.TODO(), doc)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(result)
+	return 200
 }
 
-func UpdateOneUser(name, surname, email, password string) {
+func UpdateOneUser(name, surname, email, password string) int {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "email", Value: email}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "email", Value: email}, {Key: "password", Value: password}}}}
 
-	result, err := coll.UpdateOne(context.TODO(), filter, update)
+	_, err := coll.UpdateOne(context.TODO(), filter, update)
 	CheckError(err)
-	fmt.Println(result)
+	return 200
 }
 
-func DeleteOneUser(id string) {
+func DeleteOneUser(id string) int {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "_id", Value: id}}
 
-	result, err := coll.DeleteOne(context.TODO(), filter)
+	_, err := coll.DeleteOne(context.TODO(), filter)
 	CheckError(err)
-	fmt.Println(result)
+	return 200
 
 }
 

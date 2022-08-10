@@ -14,25 +14,25 @@ func Check() {
 	fmt.Println("Connection OK!")
 }
 
-func Insert(name, email, password, address, phonenumber string) string {
+func Insert(name, email, password, address, phonenumber string) int {
 	insertDynStmt := `INSERT INTO sellers (name, email, password, address, phonenumber) values($1, $2, $3, $4, $5)`
 	_, e := db.Exec(insertDynStmt, name, email, password, address, phonenumber)
 	CheckError(e)
-	return "Inserted Succesfully"
+	return 200
 }
 
-func Update(name, email, password, address, phonenumber, id string) string {
+func Update(name, email, password, address, phonenumber, id string) int {
 	updateStmt := `update "sellers" set "name"=$1, "email"=$2, "password"=$3, "address"=$4, "phonenumber"=$5 where "id"=$6`
 	_, e := db.Exec(updateStmt, name, email, password, address, phonenumber, id)
 	CheckError(e)
-	return "Updated Succesfully"
+	return 200
 }
 
-func Delete(id string) string {
+func Delete(id string) int {
 	deleteStmt := `delete from "sellers" where id=$1`
 	_, e := db.Exec(deleteStmt, id)
 	CheckError(e)
-	return "Deleted Succesfully"
+	return 200
 }
 
 type Seller struct {
@@ -45,9 +45,6 @@ type Seller struct {
 }
 
 func GetSeller(email string) string {
-	// getStmt := `SELECT email FROM sellers WHERE email=$1`
-	// _, e := db.Exec(getStmt, email)
-	// CheckError(e)
 	var seller Seller
 
 	err := db.QueryRow("SELECT email FROM sellers WHERE email=$1", email).Scan(&seller.Email)
