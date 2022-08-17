@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
-	_ "github.com/lib/pq"
+	// _ "github.com/lib/pq"
 )
 
 func Check() {
@@ -36,6 +35,7 @@ func Delete(id string) int {
 }
 
 type Seller struct {
+	id            int
 	CompanyName   string
 	Email         string
 	Password      string
@@ -44,17 +44,17 @@ type Seller struct {
 	PhoneNumber   string
 }
 
-func GetSeller(email string) string {
+func GetSeller(email string) (id int, eMail, password string) {
 	var seller Seller
 
-	err := db.QueryRow("SELECT email FROM sellers WHERE email=$1", email).Scan(&seller.Email)
+	err := db.QueryRow("SELECT id, email, password FROM sellers WHERE email=$1", email).Scan(&seller.id, &seller.Email, &seller.Password)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "not registered"
+			return 0, "not registered", ""
 		} else {
 			log.Fatal(err)
 		}
 	}
-	return seller.Email
+	return seller.id, seller.Email, seller.Password
 }
