@@ -37,7 +37,7 @@ func DeleteOneUser(id string) int {
 
 }
 
-func FindOneUser(email string) string {
+func FindOneUser(email string) (id int, x, y string) {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "email", Value: email}}
 
@@ -46,11 +46,11 @@ func FindOneUser(email string) string {
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 
-			return "not registered"
+			return 0, "not registered", ""
 		} else {
 			panic(err)
 		}
 	}
 
-	return result["email"].(string)
+	return result["_id"].(int), result["email"].(string), result["password"].(string)
 }
