@@ -19,3 +19,5 @@ go.work
 
 *.env
 .vscode
+tmp
+.air.toml
