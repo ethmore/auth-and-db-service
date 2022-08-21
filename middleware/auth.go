@@ -15,7 +15,7 @@ type TokenBody struct {
 	Token string
 }
 
-func UserAuth(c *gin.Context) string {
+func UserAuth(c *gin.Context) (x, y string) {
 	defer func() {
 		if recover() != nil {
 			log.Println("User not logged in")
@@ -24,17 +24,11 @@ func UserAuth(c *gin.Context) string {
 	}()
 
 	var tokenBody TokenBody
-	// if err := c.BindJSON(&tokenBody); err != nil {
-	// 	fmt.Println(err)
-	// }
-
 	if err := c.ShouldBindBodyWith(&tokenBody, binding.JSON); err != nil {
 		log.Printf("%+v", err)
 	}
 
 	clientToken := tokenBody.Token
-	fmt.Println(tokenBody.Token)
-
 	secretToken := dotEnv.GoDotEnvVariable("TOKEN")
 	hmacSampleSecret := []byte(secretToken)
 
@@ -47,54 +41,14 @@ func UserAuth(c *gin.Context) string {
 	})
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-
-		fmt.Println(claims["mail"], claims["nbf"])
-		// c.Next()
-		return claims["mail"].(string)
+		return claims["mail"].(string), claims["type"].(string)
 
 	} else {
 		fmt.Println(err)
 		log.Println("User not logged in")
 		c.JSON(200, gin.H{"message": "loginNeeded"})
-		// c.Redirect(http.StatusMovedPermanently, "/login")
 		c.Abort()
 
-		return ""
+		return "", ""
 	}
 }
-
-/*
-func AuthRequired(c *gin.Context) {
-	var tokenBody TokenBody
-	if err := c.BindJSON(&tokenBody); err != nil {
-		fmt.Println(err)
-	}
-
-	clientToken := tokenBody.Token
-
-	secretToken := dotEnv.GoDotEnvVariable("TOKEN")
-	hmacSampleSecret := []byte(secretToken)
-
-	token, err := jwt.Parse(clientToken, func(token *jwt.Token) (interface{}, error) {
-		// Don't forget to validate the alg is what you expect:
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-
-		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return hmacSampleSecret, nil
-	})
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println(claims["mail"], claims["nbf"])
-		c.Next()
-
-	} else {
-		fmt.Println(err)
-		log.Println("User not logged in")
-		// c.Redirect(http.StatusMovedPermanently, "/login")
-		c.Abort()
-		return
-	}
-}
-*/
