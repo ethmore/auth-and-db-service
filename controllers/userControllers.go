@@ -29,6 +29,7 @@ type UserRegisterBody struct {
 type LoginBody struct {
 	Email    string
 	Password string
+	Type     string
 }
 
 func UserRegisterPostHandler() gin.HandlerFunc {
@@ -91,6 +92,7 @@ func UserLoginPostHandler() gin.HandlerFunc {
 
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 					"mail": requestBody.Email,
+					"type": requestBody.Type,
 					"nbf":  time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
 				})
 				tokenString, err := token.SignedString(hmacSampleSecret)
@@ -113,9 +115,9 @@ func UserLoginPostHandler() gin.HandlerFunc {
 
 func UserProfile() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var mailAuth = middleware.UserAuth(ctx)
+		var mailAuth, loginType = middleware.UserAuth(ctx)
 		if mailAuth != "" {
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth})
+			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 	}
 }
