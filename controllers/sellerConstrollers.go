@@ -29,6 +29,7 @@ type SellerRegisterBody struct {
 
 type Product struct {
 	Token       string
+	Id          string
 	Title       string
 	Description string
 	Price       string
@@ -84,6 +85,7 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 
 		email := requestBody.Email
 		password := requestBody.Password
+
 		salt := dotEnv.GoDotEnvVariable("SALT")
 
 		_, checkedMail, checkedPassword := postgresql.GetSeller(email)
@@ -98,6 +100,7 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 					"mail": requestBody.Email,
+					"type": requestBody.Type,
 					"nbf":  time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
 				})
 				tokenString, err := token.SignedString(hmacSampleSecret)
@@ -120,16 +123,16 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 
 func SellerDashboard() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var mailAuth = middleware.UserAuth(ctx)
+		var mailAuth, loginType = middleware.UserAuth(ctx)
 		if mailAuth != "" {
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth})
+			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 	}
 }
 
 func AddProduct() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var mailAuth = middleware.UserAuth(ctx)
+		var mailAuth, loginType = middleware.UserAuth(ctx)
 		if mailAuth != "" {
 			var requestBody Product
 			if err := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); err != nil {
@@ -138,8 +141,50 @@ func AddProduct() gin.HandlerFunc {
 
 			fmt.Println(requestBody.Title, requestBody.Description, requestBody.Price, requestBody.Stock)
 			postgresql.InsertProduct(mailAuth, requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Stock, requestBody.Stock)
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth})
+			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 
+	}
+}
+
+func GetSellerProducts() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var mailAuth, _ = middleware.UserAuth(ctx)
+		if mailAuth != "" {
+			fmt.Println("a")
+			products, err := postgresql.GetSellerProducts(mailAuth)
+			if err != nil {
+				log.Fatal(err)
+			}
+			ctx.JSON(200, gin.H{"message": "OK", "products": products})
+		}
+	}
+}
+
+func DeleteProduct() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var mailAuth, _ = middleware.UserAuth(ctx)
+		if mailAuth != "" {
+
+			var requestBody Product
+			if err := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); err != nil {
+				log.Printf("%+v", err)
+			}
+
+			postgresql.DeleteProduct(requestBody.Id)
+			fmt.Println(requestBody.Id)
+
+			ctx.JSON(200, gin.H{"message": "OK"})
+		}
+	}
+}
+
+func GetAllProducts() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		products, err := postgresql.GetAllProducts()
+		if err != nil {
+			log.Fatal(err)
+		}
+		ctx.JSON(200, gin.H{"products": products})
 	}
 }
