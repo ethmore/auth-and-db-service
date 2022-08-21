@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -37,7 +38,7 @@ func DeleteOneUser(id string) int {
 
 }
 
-func FindOneUser(email string) (id int, x, y string) {
+func FindOneUser(email string) (id primitive.ObjectID, x, y string) {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "email", Value: email}}
 
@@ -46,11 +47,11 @@ func FindOneUser(email string) (id int, x, y string) {
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 
-			return 0, "not registered", ""
+			return primitive.NilObjectID, "not registered", ""
 		} else {
 			panic(err)
 		}
 	}
 
-	return result["_id"].(int), result["email"].(string), result["password"].(string)
+	return result["_id"].(primitive.ObjectID), result["email"].(string), result["password"].(string)
 }
