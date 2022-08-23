@@ -1,37 +1,38 @@
 package postgresql
 
 import (
-	"database/sql"
+	// "database/sql"
+	"errors"
 	"fmt"
-	"log"
 	"strconv"
 )
 
-func InsertProduct(sellerMail, title, price, description, photo, stock string) int {
-	sellerId, _, _ := GetSeller(sellerMail)
+func InsertProduct(sellerMail, title, price, description, photo, stock string) error {
+	seller, err := GetSeller(sellerMail)
+	if err != nil {
+		return err
+	}
 
-	if sellerId != 0 {
+	if seller.id != 0 {
 		insertStmt := `INSERT INTO products (sellerid, title, price, description, photo, stock) values ($1, $2, $3, $4, $5, $6)`
-		_, e := db.Exec(insertStmt, sellerId, title, price, description, photo, stock)
-		CheckError(e)
-		return 200
+		_, err := db.Exec(insertStmt, seller.id, title, price, description, photo, stock)
+		return err
 	} else {
-		return 400
+		err := errors.New("postgressql: Insert id is empty")
+		return err
 	}
 }
 
-func UpdateProduct(title, price, description, photo, stock, id string) int {
+func UpdateProduct(title, price, description, photo, stock, id string) error {
 	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where "id"=$6`
-	_, e := db.Exec(updateStmt, title, price, description, photo, stock, id)
-	CheckError(e)
-	return 200
+	_, err := db.Exec(updateStmt, title, price, description, photo, stock, id)
+	return err
 }
 
-func DeleteProduct(id string) int {
+func DeleteProduct(id string) error {
 	deleteStmt := `delete from "products" where id=$1`
-	_, e := db.Exec(deleteStmt, id)
-	CheckError(e)
-	return 200
+	_, err := db.Exec(deleteStmt, id)
+	return err
 }
 
 type Product struct {
@@ -44,15 +45,14 @@ type Product struct {
 }
 
 func GetSellerProducts(eMail string) ([]Product, error) {
-	id, _, _ := GetSeller(eMail)
-
-	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products WHERE sellerid=$1", id)
+	seller, err := GetSeller(eMail)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
-		} else {
-			log.Fatal(err)
-		}
+		return nil, err
+	}
+
+	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products WHERE sellerid=$1", seller.id)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -62,14 +62,14 @@ func GetSellerProducts(eMail string) ([]Product, error) {
 		var product Product
 		err := rows.Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		products = append(products, product)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Println(products)
@@ -81,11 +81,7 @@ func GetAllProducts() ([]Product, error) {
 
 	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products")
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
-		} else {
-			log.Fatal(err)
-		}
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -95,14 +91,14 @@ func GetAllProducts() ([]Product, error) {
 		var product Product
 		err := rows.Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		products = append(products, product)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Println(products)
@@ -115,11 +111,7 @@ func GetProduct(id string) (*Product, error) {
 
 	err := db.QueryRow("SELECT id, title, price, description, photo, stock FROM products WHERE id=$1", idInt).Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
-		} else {
-			log.Fatal(err)
-		}
+		return nil, err
 	}
 
 	fmt.Println(product)

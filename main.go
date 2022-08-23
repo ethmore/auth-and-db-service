@@ -3,8 +3,8 @@ package main
 import (
 	// "net/http"
 
-	"e-comm/authService/mongodb"
-	"e-comm/authService/postgresql"
+	"e-comm/authService/repositories/mongodb"
+	"e-comm/authService/repositories/postgresql"
 	"e-comm/authService/routes"
 
 	"github.com/gin-contrib/cors"

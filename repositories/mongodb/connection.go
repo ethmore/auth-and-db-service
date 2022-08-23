@@ -22,12 +22,6 @@ var singleInstance *single
 type single struct {
 }
 
-func CheckError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func Connect() *single {
 	if singleInstance == nil {
 		lock.Lock()
@@ -39,7 +33,9 @@ func Connect() *single {
 				log.Fatal("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
 			}
 			client, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(URI))
-			CheckError(err)
+			if err != nil {
+				panic(err)
+			}
 			singleInstance = &single{}
 			fmt.Println("MongoDB Connected!")
 		} else {

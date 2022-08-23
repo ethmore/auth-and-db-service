@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"e-comm/authService/bcrypt"
@@ -10,7 +11,7 @@ import (
 
 	"e-comm/authService/middleware"
 
-	"e-comm/authService/mongodb"
+	"e-comm/authService/repositories/mongodb"
 
 	"github.com/golang-jwt/jwt"
 
@@ -48,17 +49,20 @@ func UserRegisterPostHandler() gin.HandlerFunc {
 		salt := dotEnv.GoDotEnvVariable("SALT")
 
 		if password == passwordAgain {
-			_, checkedMail, _ := mongodb.FindOneUser(email)
-			if checkedMail == email {
+			user, err := mongodb.FindOneUser(email)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if user.Email == email {
 				fmt.Println("email already registered")
 				ctx.JSON(400, gin.H{"message": "email already registered"})
 			} else {
 				saltedPassword := password + salt
 				hash, _ := bcrypt.HashPassword(saltedPassword)
 
-				res := mongodb.InsertOneUser(name, surname, email, hash)
-				if res == 200 {
-					ctx.JSON(200, gin.H{"message": "OK"})
+				err := mongodb.InsertOneUser(name, surname, email, hash)
+				if err == nil {
+					ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 				}
 
 			}
@@ -80,11 +84,14 @@ func UserLoginPostHandler() gin.HandlerFunc {
 
 		salt := dotEnv.GoDotEnvVariable("SALT")
 
-		_, checkedMail, checkedPassword := mongodb.FindOneUser(requestBody.Email)
+		user, err := mongodb.FindOneUser(requestBody.Email)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-		if checkedMail == requestBody.Email {
+		if user.Email == requestBody.Email {
 			saltedPassword := requestBody.Password + salt
-			match := bcrypt.CheckPasswordHash(saltedPassword, checkedPassword)
+			match := bcrypt.CheckPasswordHash(saltedPassword, user.Password)
 
 			if match {
 				secretToken := dotEnv.GoDotEnvVariable("TOKEN")
@@ -101,7 +108,7 @@ func UserLoginPostHandler() gin.HandlerFunc {
 				}
 
 				fmt.Println("OK")
-				ctx.JSON(200, gin.H{"message": "OK", "token": tokenString})
+				ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": tokenString})
 			} else {
 				fmt.Println("wrong password")
 				ctx.JSON(400, gin.H{"message": "wrong password"})
@@ -117,7 +124,7 @@ func UserProfile() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var mailAuth, loginType = middleware.UserAuth(ctx)
 		if mailAuth != "" {
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 	}
 }

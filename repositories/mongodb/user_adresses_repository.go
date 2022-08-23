@@ -6,31 +6,31 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, province, county, address string) int {
-	userId, _, _ := FindOneUser(userMail)
+func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, province, county, address string) error {
+	user, err1 := FindOneUser(userMail)
+	if err1 != nil {
+		return err1
+	}
 
 	coll := client.Database("eCommUsers").Collection("userAddresses")
-	doc := bson.D{{Key: "userId", Value: userId}, {Key: "addressName", Value: addressName}, {Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "address", Value: address}}
+	doc := bson.D{{Key: "userId", Value: user.Id}, {Key: "addressName", Value: addressName}, {Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "address", Value: address}}
 	_, err := coll.InsertOne(context.TODO(), doc)
-	CheckError(err)
-	return 200
+	return err
 }
 
-func UpdateUserAdress(addressName, name, surname, phoneNumber, province, county, address string) int {
+func UpdateUserAdress(addressName, name, surname, phoneNumber, province, county, address string) error {
 	coll := client.Database("eCommUsers").Collection("userAddresses")
 	filter := bson.D{{Key: "addressName", Value: addressName}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "address", Value: address}}}}
 
 	_, err := coll.UpdateOne(context.TODO(), filter, update)
-	CheckError(err)
-	return 200
+	return err
 }
 
-func DeleteUserAddress(userMail, addressName string) int {
+func DeleteUserAddress(userMail, addressName string) error {
 	coll := client.Database("eCommUsers").Collection("userAddresses")
 	filter := bson.D{{Key: "addressName", Value: addressName}}
 
 	_, err := coll.DeleteOne(context.TODO(), filter)
-	CheckError(err)
-	return 200
+	return err
 }

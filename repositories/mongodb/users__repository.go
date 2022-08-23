@@ -5,53 +5,58 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	// "go.mongodb.org/mongo-driver/mongo"
 )
 
-func InsertOneUser(name, surname, email, password string) int {
+func InsertOneUser(name, surname, email, password string) error {
 	coll := client.Database("eCommUsers").Collection("users")
 	doc := bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "email", Value: email}, {Key: "password", Value: password}}
 	_, err := coll.InsertOne(context.TODO(), doc)
-	if err != nil {
-		panic(err)
-	}
-	return 200
+	return err
 }
 
-func UpdateOneUser(name, surname, email, password string) int {
+func UpdateOneUser(name, surname, email, password string) error {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "email", Value: email}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "email", Value: email}, {Key: "password", Value: password}}}}
 
 	_, err := coll.UpdateOne(context.TODO(), filter, update)
-	CheckError(err)
-	return 200
+	return err
 }
 
-func DeleteOneUser(id string) int {
+func DeleteOneUser(id string) error {
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "_id", Value: id}}
 
 	_, err := coll.DeleteOne(context.TODO(), filter)
-	CheckError(err)
-	return 200
-
+	return err
 }
 
-func FindOneUser(email string) (id primitive.ObjectID, x, y string) {
+type User struct {
+	Id       primitive.ObjectID
+	Name     string
+	Surname  string
+	Email    string
+	Password string
+}
+
+func FindOneUser(email string) (*User, error) {
+	var user User
+
 	coll := client.Database("eCommUsers").Collection("users")
 	filter := bson.D{{Key: "email", Value: email}}
 
 	var result bson.M
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-
-			return primitive.NilObjectID, "not registered", ""
-		} else {
-			panic(err)
-		}
+		return nil, err
 	}
 
-	return result["_id"].(primitive.ObjectID), result["email"].(string), result["password"].(string)
+	user.Id = result["_id"].(primitive.ObjectID)
+	user.Name = result["name"].(string)
+	user.Surname = result["surname"].(string)
+	user.Email = result["email"].(string)
+	user.Password = result["password"].(string)
+
+	return &user, nil
 }

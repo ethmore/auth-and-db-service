@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"e-comm/authService/bcrypt"
@@ -10,7 +11,7 @@ import (
 
 	"e-comm/authService/middleware"
 
-	"e-comm/authService/postgresql"
+	"e-comm/authService/repositories/postgresql"
 
 	"github.com/golang-jwt/jwt"
 
@@ -55,17 +56,21 @@ func SellerRegisterPostHandler() gin.HandlerFunc {
 		salt := dotEnv.GoDotEnvVariable("SALT")
 
 		if password == passwordAgain {
-			_, checkedMail, _ := postgresql.GetSeller(email)
-			if checkedMail == email {
+			seller, err := postgresql.GetSeller(email)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			if seller.Email == email {
 				fmt.Println("email already registered")
 				ctx.JSON(400, gin.H{"message": "email already registered"})
 			} else {
 				saltedPassword := password + salt
 				hash, _ := bcrypt.HashPassword(saltedPassword)
 
-				res := postgresql.Insert(companyName, email, hash, address, phonenumber)
-				if res == 200 {
-					ctx.JSON(200, gin.H{"message": "OK"})
+				err := postgresql.Insert(companyName, email, hash, address, phonenumber)
+				if err == nil {
+					ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 				}
 			}
 
@@ -88,11 +93,14 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 
 		salt := dotEnv.GoDotEnvVariable("SALT")
 
-		_, checkedMail, checkedPassword := postgresql.GetSeller(email)
+		seller, err := postgresql.GetSeller(email)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-		if checkedMail == email {
+		if seller.Email == email {
 			saltedPassword := password + salt
-			match := bcrypt.CheckPasswordHash(saltedPassword, checkedPassword)
+			match := bcrypt.CheckPasswordHash(saltedPassword, seller.Password)
 
 			if match {
 				secretToken := dotEnv.GoDotEnvVariable("TOKEN")
@@ -109,7 +117,7 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 				}
 
 				fmt.Println("OK")
-				ctx.JSON(200, gin.H{"message": "OK", "token": tokenString})
+				ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": tokenString})
 			} else {
 				fmt.Println("wrong password")
 				ctx.JSON(400, gin.H{"message": "wrong password"})
@@ -125,7 +133,7 @@ func SellerDashboard() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var mailAuth, loginType = middleware.UserAuth(ctx)
 		if mailAuth != "" {
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 	}
 }
@@ -141,7 +149,7 @@ func AddProduct() gin.HandlerFunc {
 
 			fmt.Println(requestBody.Title, requestBody.Description, requestBody.Price, requestBody.Stock)
 			postgresql.InsertProduct(mailAuth, requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Stock, requestBody.Stock)
-			ctx.JSON(200, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": mailAuth, "type": loginType})
 		}
 
 	}
@@ -156,7 +164,7 @@ func GetSellerProducts() gin.HandlerFunc {
 			if err != nil {
 				log.Fatal(err)
 			}
-			ctx.JSON(200, gin.H{"message": "OK", "products": products})
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK", "products": products})
 		}
 	}
 }
@@ -174,7 +182,7 @@ func DeleteProduct() gin.HandlerFunc {
 			postgresql.DeleteProduct(requestBody.Id)
 			fmt.Println(requestBody.Id)
 
-			ctx.JSON(200, gin.H{"message": "OK"})
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 		}
 	}
 }
@@ -185,6 +193,6 @@ func GetAllProducts() gin.HandlerFunc {
 		if err != nil {
 			log.Fatal(err)
 		}
-		ctx.JSON(200, gin.H{"products": products})
+		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"fmt"
 	"log"
+	"net/http"
 )
 
 type TokenBody struct {
@@ -19,7 +20,7 @@ func UserAuth(c *gin.Context) (x, y string) {
 	defer func() {
 		if recover() != nil {
 			log.Println("User not logged in")
-			c.JSON(200, gin.H{"message": "loginNeeded"})
+			c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
 		}
 	}()
 
@@ -46,7 +47,7 @@ func UserAuth(c *gin.Context) (x, y string) {
 	} else {
 		fmt.Println(err)
 		log.Println("User not logged in")
-		c.JSON(200, gin.H{"message": "loginNeeded"})
+		c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
 		c.Abort()
 
 		return "", ""

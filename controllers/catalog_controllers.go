@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"e-comm/authService/postgresql"
+	"e-comm/authService/repositories/postgresql"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -26,6 +27,6 @@ func GetProduct() gin.HandlerFunc {
 		if err != nil {
 			log.Fatal(err)
 		}
-		ctx.JSON(200, gin.H{"products": products})
+		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}
 }
