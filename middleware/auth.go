@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"e-comm/authService/dotEnv"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -9,24 +10,33 @@ import (
 
 	"fmt"
 	"log"
-	"net/http"
 )
 
 type TokenBody struct {
 	Token string
 }
 
-func UserAuth(c *gin.Context) (x, y string) {
-	defer func() {
-		if recover() != nil {
-			log.Println("User not logged in")
-			c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
-		}
-	}()
+type Authentication struct {
+	EMail string
+	Type  string
+}
+
+func UserAuth(c *gin.Context) (*Authentication, error) {
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		fmt.Println("Recovered in f", r)
+	// 		fmt.Println("User not logged in")
+	// 		c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
+	// 	}
+	// }()
 
 	var tokenBody TokenBody
 	if err := c.ShouldBindBodyWith(&tokenBody, binding.JSON); err != nil {
 		log.Printf("%+v", err)
+	}
+
+	if tokenBody.Token == "" {
+		return nil, errors.New("empty token")
 	}
 
 	clientToken := tokenBody.Token
@@ -42,14 +52,13 @@ func UserAuth(c *gin.Context) (x, y string) {
 	})
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims["mail"].(string), claims["type"].(string)
+		var auth = Authentication{
+			EMail: claims["mail"].(string),
+			Type:  claims["type"].(string),
+		}
+		return &auth, nil
 
 	} else {
-		fmt.Println(err)
-		log.Println("User not logged in")
-		c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
-		c.Abort()
-
-		return "", ""
+		return nil, err
 	}
 }

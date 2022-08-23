@@ -5,7 +5,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	// "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func InsertOneUser(name, surname, email, password string) error {
@@ -48,6 +48,9 @@ func FindOneUser(email string) (*User, error) {
 
 	var result bson.M
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

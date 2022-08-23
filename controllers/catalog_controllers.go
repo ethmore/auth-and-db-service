@@ -3,7 +3,6 @@ package controllers
 import (
 	"e-comm/authService/repositories/postgresql"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +17,17 @@ type ProductResponse struct {
 func GetProduct() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var requestBody ProductResponse
-		if err := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); err != nil {
-			log.Printf("%+v", err)
+		if bodyErr := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); bodyErr != nil {
+			fmt.Println("body: ", bodyErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
 		}
 
-		fmt.Println(requestBody.Id)
-		products, err := postgresql.GetProduct(requestBody.Id)
-		if err != nil {
-			log.Fatal(err)
+		products, pqErr := postgresql.GetProduct(requestBody.Id)
+		if pqErr != nil {
+			fmt.Println("postgresql (get)", pqErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
 		}
 		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}

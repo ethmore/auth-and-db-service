@@ -1,7 +1,9 @@
 package postgresql
 
 import (
-	// "database/sql"
+	"database/sql"
+	"errors"
+
 	_ "github.com/lib/pq"
 )
 
@@ -35,11 +37,14 @@ type Seller struct {
 func GetSeller(email string) (*Seller, error) {
 	var seller Seller
 
+	if email == "" {
+		return nil, errors.New("email cannot be empty")
+	}
+
 	err := db.QueryRow("SELECT id, email, password FROM sellers WHERE email=$1", email).Scan(&seller.id, &seller.Email, &seller.Password)
 
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
-
 	}
 	return &seller, nil
 }
