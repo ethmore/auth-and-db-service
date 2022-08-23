@@ -3,7 +3,6 @@ package postgresql
 import (
 	// "database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -72,13 +71,11 @@ func GetSellerProducts(eMail string) ([]Product, error) {
 		return nil, err
 	}
 
-	fmt.Println(products)
+	// fmt.Println(products)
 	return products, nil
 }
 
 func GetAllProducts() ([]Product, error) {
-	fmt.Println("A")
-
 	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products")
 	if err != nil {
 		return nil, err
@@ -101,7 +98,7 @@ func GetAllProducts() ([]Product, error) {
 		return nil, err
 	}
 
-	fmt.Println(products)
+	// fmt.Println(products)
 	return products, nil
 }
 
@@ -114,6 +111,6 @@ func GetProduct(id string) (*Product, error) {
 		return nil, err
 	}
 
-	fmt.Println(product)
+	// fmt.Println(product)
 	return &product, nil
 }
