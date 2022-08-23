@@ -50,7 +50,7 @@ func Connect() *single {
 func Disconnect() {
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
+			fmt.Println("MongoDB couldn't disconnect")
 		}
 		fmt.Println("MongoDB Disconnected")
 	}()
