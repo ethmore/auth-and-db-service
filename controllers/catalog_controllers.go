@@ -25,7 +25,7 @@ func GetProduct() gin.HandlerFunc {
 
 		products, pqErr := postgresql.GetProduct(requestBody.Id)
 		if pqErr != nil {
-			fmt.Println("postgresql (get)", pqErr)
+			fmt.Println("postgresql (get)", pqErr, "req id: ", requestBody.Id)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
