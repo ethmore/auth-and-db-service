@@ -3,6 +3,7 @@ package postgresql
 import (
 	// "database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -23,7 +24,8 @@ func InsertProduct(sellerMail, title, price, description, photo, stock string) e
 }
 
 func UpdateProduct(title, price, description, photo, stock, id string) error {
-	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where "id"=$6`
+	fmt.Println(title, price, description, photo, stock, id)
+	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where id=$6`
 	_, err := db.Exec(updateStmt, title, price, description, photo, stock, id)
 	return err
 }
