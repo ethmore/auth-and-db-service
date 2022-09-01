@@ -147,12 +147,41 @@ func AddProduct() gin.HandlerFunc {
 		insertErr := postgresql.InsertProduct(auth.EMail, requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Stock, requestBody.Stock)
 		if insertErr != nil {
 			fmt.Println("postgresql (insert): ", insertErr)
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
+			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
 		fmt.Println("Seller: ", auth.EMail, " - Added new product:", requestBody.Title)
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": auth.EMail, "type": auth.Type})
+	}
+}
+
+func EditProduct() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var requestBody Product
+		auth, authErr := middleware.UserAuth(ctx)
+
+		if authErr != nil {
+			fmt.Println("auth: ", authErr)
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
+			return
+		}
+		if bodyErr := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); bodyErr != nil {
+			fmt.Println("body: ", bodyErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		updateStmt := postgresql.UpdateProduct(requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Photo, requestBody.Stock, requestBody.Id)
+		if updateStmt != nil {
+			fmt.Println("postgresql (insert): ", updateStmt)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println("Seller: ", auth.EMail, " - Edited a product:", requestBody.Title)
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": auth.EMail, "type": auth.Type})
+
 	}
 }
 
@@ -162,6 +191,12 @@ func GetSellerProducts() gin.HandlerFunc {
 		if authErr != nil {
 			fmt.Println("authentication: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
+			return
+		}
+
+		if auth.Type != "seller" {
+			fmt.Println("authentication: ", "type error")
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "type error"})
 			return
 		}
 
