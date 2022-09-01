@@ -17,8 +17,26 @@ func PublicRoutes(g *gin.RouterGroup) {
 
 func PrivateRoutes(g *gin.RouterGroup) {
 	g.POST("/profile", controllers.UserProfile())
+	g.POST("/getUserInfo", controllers.GetUserInfo())
+
 	g.POST("/addProduct", controllers.AddProduct())
 	g.POST("/getProducts", controllers.GetSellerProducts())
 	g.POST("/deleteProduct", controllers.DeleteProduct())
+	g.POST("/editProduct", controllers.EditProduct())
+
+	g.POST("/newUserAddress", controllers.NewUserAddress())
+	g.POST("/getUserAddressById", controllers.GetUserAddressById())
+	g.POST("/getUserAddresses", controllers.GetUserAddresses())
+
+	g.POST("/addProductToCart", controllers.AddProductToCart())
+	g.POST("/getCartProducts", controllers.GetCartProducts())
+	g.POST("/getCartInfo", controllers.GetCartInfo())
+	g.POST("/removeProductFromCart", controllers.RemoveProductFromCart())
+	g.POST("/increaseProductQty", controllers.IncreaseProductQty())
+	g.POST("/decreaseProductQty", controllers.DecreaseProductQty())
+	g.POST("/addTotalToCart", controllers.AddTotalToCart())
+	g.POST("/getTotalPrice", controllers.GetTotalPrice())
+
+	g.POST("/clearCart", controllers.ClearCart())
 
 }
