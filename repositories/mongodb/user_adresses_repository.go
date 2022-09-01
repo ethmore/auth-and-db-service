@@ -2,9 +2,23 @@ package mongodb
 
 import (
 	"context"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+type Address struct {
+	Id              string `bson:"_id"`
+	Title           string
+	Name            string
+	Surname         string
+	PhoneNumber     string
+	Province        string
+	County          string
+	DetailedAddress string
+}
 
 func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, province, county, address string) error {
 	user, err1 := FindOneUser(userMail)
@@ -13,7 +27,7 @@ func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, provin
 	}
 
 	coll := client.Database("eCommUsers").Collection("userAddresses")
-	doc := bson.D{{Key: "userId", Value: user.Id}, {Key: "addressName", Value: addressName}, {Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "address", Value: address}}
+	doc := bson.D{{Key: "userId", Value: user.Id}, {Key: "title", Value: addressName}, {Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "detailedAddress", Value: address}}
 	_, err := coll.InsertOne(context.TODO(), doc)
 	return err
 }
@@ -33,4 +47,69 @@ func DeleteUserAddress(userMail, addressName string) error {
 
 	_, err := coll.DeleteOne(context.TODO(), filter)
 	return err
+}
+
+func FindUserAddress(addressID string) (*Address, error) {
+	addressID = strings.TrimSpace(addressID)
+	objID, convErr := primitive.ObjectIDFromHex(addressID)
+	if convErr != nil {
+		return nil, convErr
+	}
+
+	coll := client.Database("eCommUsers").Collection("userAddresses")
+	filter := bson.D{{Key: "_id", Value: objID}}
+
+	var result bson.M
+	err := coll.FindOne(context.TODO(), filter).Decode(&result)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	strID := result["_id"].(primitive.ObjectID).Hex()
+	var address = Address{
+		Id:              strID,
+		Title:           result["title"].(string),
+		Name:            result["name"].(string),
+		Surname:         result["surname"].(string),
+		PhoneNumber:     result["phoneNumber"].(string),
+		Province:        result["province"].(string),
+		County:          result["county"].(string),
+		DetailedAddress: result["detailedAddress"].(string),
+	}
+
+	return &address, nil
+}
+
+func FindAllUserAddresses(userMail string) ([]Address, error) {
+	// var address Address
+	user, findErr := FindOneUser(userMail)
+	if findErr != nil {
+		return nil, findErr
+	}
+
+	coll := client.Database("eCommUsers").Collection("userAddresses")
+	filter := bson.D{{Key: "userId", Value: user.Id}}
+	cur, err := coll.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []Address
+	for cur.Next(context.TODO()) {
+		var elem Address
+		err := cur.Decode(&elem)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, elem)
+	}
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	defer cur.Close(context.TODO())
+	return results, nil
 }
