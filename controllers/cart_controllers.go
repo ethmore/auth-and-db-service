@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type CartRequest struct {
@@ -56,6 +57,18 @@ func AddProductToCart() gin.HandlerFunc {
 		}
 		// mongodb.NewCart(auth.EMail)
 		addErr := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+		if addErr == mongo.ErrNoDocuments {
+			mongodb.NewCart(auth.EMail)
+			err := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+			if err != nil {
+				fmt.Println("mongodb (add-2): ", addErr)
+				ctx.Status(http.StatusInternalServerError)
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
+			return
+		}
 		if addErr != nil {
 			fmt.Println("mongodb (add): ", addErr)
 			ctx.Status(http.StatusInternalServerError)
