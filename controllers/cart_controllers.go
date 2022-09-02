@@ -196,6 +196,33 @@ func RemoveProductFromCart() gin.HandlerFunc {
 	}
 }
 
+func ChangeProductQty() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		auth, authErr := middleware.UserAuth(ctx)
+		if authErr != nil {
+			fmt.Println("auth: ", authErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		var cartReq CartRequest
+		if bodyErr := ctx.ShouldBindBodyWith(&cartReq, binding.JSON); bodyErr != nil {
+			fmt.Println("body: ", authErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		err := mongodb.ChangeProductQty(auth.EMail, cartReq.Id, cartReq.Qty)
+		if err != nil {
+			fmt.Println("mongodb (update): ", err)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
+	}
+}
+
 func IncreaseProductQty() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var body CartRequest

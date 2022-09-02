@@ -167,6 +167,34 @@ func DecreaseProductQty(userMail, productId string) error {
 	return err
 }
 
+func ChangeProductQty(userMail, productId, productQty string) error {
+	cart, findErr := FindAllCartProducts(userMail)
+	if findErr != nil {
+		return findErr
+	}
+	fmt.Println(productId, productQty)
+	var newProducts []Product
+	for i := 0; i < len(cart.Products); i++ {
+		if cart.Products[i].Id == productId {
+			cart.Products[i].Qty = productQty
+		}
+
+		newProducts = append(newProducts, cart.Products[i])
+		fmt.Println(newProducts)
+	}
+
+	user, usrErr := FindOneUser(userMail)
+	if usrErr != nil {
+		return usrErr
+	}
+	err := UpdateCartProducts(user.Id, newProducts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func AddTotalToCart(userMail, totalPrice string) error {
 	cart, findErr := FindAllCartProducts(userMail)
 	if findErr != nil {
