@@ -32,6 +32,13 @@ type LoginBody struct {
 	Type     string
 }
 
+type ChangePassword struct {
+	Token            string
+	OldPassword      string
+	NewPassword      string
+	NewPasswordAgain string
+}
+
 type AddressBody struct {
 	Title           string
 	Name            string
@@ -175,6 +182,64 @@ func GetUserInfo() gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "userInfo": user})
+	}
+}
+
+func ChangeUserPassword() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var passBody ChangePassword
+		if bodyErr := ctx.ShouldBindBodyWith(&passBody, binding.JSON); bodyErr != nil {
+			fmt.Println("body: ", bodyErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		auth, authErr := middleware.UserAuth(ctx)
+		if authErr != nil {
+			fmt.Println("auth:", authErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		user, findErr := mongodb.FindOneUser(auth.EMail)
+		if findErr != nil {
+			fmt.Println("mongodb (find): ", findErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		salt := dotEnv.GoDotEnvVariable("SALT")
+		saltedPassword := passBody.OldPassword + salt
+		match := bcrypt.CheckPasswordHash(saltedPassword, user.Password)
+
+		fmt.Println(passBody)
+
+		if !match {
+			fmt.Println("old password does not match")
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong old password"})
+			return
+		}
+
+		if passBody.NewPassword != passBody.NewPasswordAgain {
+			fmt.Println("passwords does not match")
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "passwords does not match"})
+			return
+		}
+		newSalt := dotEnv.GoDotEnvVariable("SALT")
+		newSaltedPassword := passBody.NewPassword + newSalt
+		newHash, _ := bcrypt.HashPassword(newSaltedPassword)
+
+		updateErr := mongodb.ChangeUserPassword(auth.EMail, newHash)
+		if updateErr != nil {
+			fmt.Println("mongodb (insert): ", updateErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println("User changed password: ", auth.EMail)
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
+
+		// ctx.JSON(http.StatusOK, gin.H{"message": "OK", "userInfo": user})
 	}
 }
 

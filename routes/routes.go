@@ -18,6 +18,7 @@ func PublicRoutes(g *gin.RouterGroup) {
 func PrivateRoutes(g *gin.RouterGroup) {
 	g.POST("/profile", controllers.UserProfile())
 	g.POST("/getUserInfo", controllers.GetUserInfo())
+	g.POST("/changeUserPassword", controllers.ChangeUserPassword())
 
 	g.POST("/addProduct", controllers.AddProduct())
 	g.POST("/getProducts", controllers.GetSellerProducts())

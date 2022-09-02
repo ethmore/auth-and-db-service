@@ -63,3 +63,17 @@ func FindOneUser(email string) (*User, error) {
 
 	return &user, nil
 }
+
+func ChangeUserPassword(userMail, newPassword string) error {
+	user, err := FindOneUser(userMail)
+	if err != nil {
+		return err
+	}
+
+	updateErr := UpdateOneUser(user.Name, user.Surname, user.Email, newPassword)
+	if updateErr != nil {
+		return updateErr
+	}
+
+	return nil
+}
