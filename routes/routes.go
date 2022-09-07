@@ -41,4 +41,11 @@ func PrivateRoutes(g *gin.RouterGroup) {
 
 	g.POST("/clearCart", controllers.ClearCart())
 
+	g.POST("/createPayment", controllers.CreatePayment())
+	g.POST("/updatePaymentStatus", controllers.UpdatePaymentStatus())
+
+	g.POST("/getProductsSellers", controllers.GetProductsSellers())
+
+	g.POST("/insertOrder", controllers.InsertOrder())
+	g.POST("/getAllOrders", controllers.GetAllOrders())
 }
