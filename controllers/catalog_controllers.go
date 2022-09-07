@@ -32,3 +32,15 @@ func GetProduct() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}
 }
+
+func GetAllProducts() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		products, err := postgresql.GetAllProducts()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(products)
+		ctx.JSON(http.StatusOK, gin.H{"products": products})
+	}
+}
