@@ -43,6 +43,7 @@ type Product struct {
 	Description string
 	Image       string
 	Stock       string
+	SellerID    string
 }
 
 func GetSellerProducts(eMail string) ([]Product, error) {
@@ -108,7 +109,7 @@ func GetProduct(id string) (*Product, error) {
 	var product Product
 	idInt, _ := strconv.Atoi(id)
 
-	err := db.QueryRow("SELECT id, title, price, description, photo, stock FROM products WHERE id=$1", idInt).Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
+	err := db.QueryRow("SELECT id, title, price, description, photo, stock, sellerid FROM products WHERE id=$1", idInt).Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock, &product.SellerID)
 	if err != nil {
 		return nil, err
 	}
