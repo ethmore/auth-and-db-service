@@ -58,7 +58,12 @@ func AddProductToCart() gin.HandlerFunc {
 		// mongodb.NewCart(auth.EMail)
 		addErr := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
 		if addErr == mongo.ErrNoDocuments {
-			mongodb.NewCart(auth.EMail)
+			if err := mongodb.NewCart(auth.EMail); err != nil {
+				fmt.Println("mongodb (new-cart): ", err)
+				ctx.Status(http.StatusInternalServerError)
+				return
+			}
+
 			err := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
 			if err != nil {
 				fmt.Println("mongodb (add-2): ", addErr)

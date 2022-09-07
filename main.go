@@ -30,5 +30,7 @@ func main() {
 	// private.Use(middleware.AuthRequired)
 	routes.PrivateRoutes(private)
 
-	router.Run(":3002")
+	if err := router.Run(":3002"); err != nil {
+		panic(err)
+	}
 }
