@@ -48,3 +48,23 @@ func GetSeller(email string) (*Seller, error) {
 	}
 	return &seller, nil
 }
+
+type SellerName struct {
+	id          int
+	CompanyName string
+}
+
+func GetSellerNameByID(id string) (*SellerName, error) {
+	var seller SellerName
+
+	if id == "" {
+		return nil, errors.New("id cannot be empty")
+	}
+
+	err := db.QueryRow("SELECT id, name FROM sellers WHERE id=$1", id).Scan(&seller.id, &seller.CompanyName)
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return &seller, nil
+}
