@@ -247,3 +247,56 @@ func GetAllProducts() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}
 }
+
+type ProductsSeller struct {
+	Token      string
+	ProductIDs []string
+}
+
+type ProductAndSeller struct {
+	ProductID string
+	Seller    string
+}
+
+func GetProductsSellers() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		_, authErr := middleware.UserAuth(ctx)
+		if authErr != nil {
+			fmt.Println("auth: ", authErr)
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
+			return
+		}
+
+		var requestBody ProductsSeller
+		if bodyErr := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); bodyErr != nil {
+			fmt.Println("body: ", bodyErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
+		var productSeller []ProductAndSeller
+		for _, j := range requestBody.ProductIDs {
+			product, err := postgresql.GetProduct(j)
+			if err != nil {
+				fmt.Println("postgresql (get): ", err)
+				ctx.Status(http.StatusInternalServerError)
+				return
+			}
+
+			seller, err := postgresql.GetSellerNameByID(product.SellerID)
+			if err != nil {
+				fmt.Println("postgresql (get-seller): ", err)
+				ctx.Status(http.StatusInternalServerError)
+				return
+			}
+			fmt.Println(seller)
+			var prodSeller ProductAndSeller
+			prodSeller.ProductID = product.Id
+			prodSeller.Seller = seller.CompanyName
+
+			productSeller = append(productSeller, prodSeller)
+		}
+
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error", "productsAndSellers": productSeller})
+	}
+}
