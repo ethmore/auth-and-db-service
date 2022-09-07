@@ -3,41 +3,14 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"time"
-
-	"e-comm/authService/bcrypt"
-	"e-comm/authService/dotEnv"
 
 	"e-comm/authService/middleware"
-
 	"e-comm/authService/repositories/mongodb"
-
-	"github.com/golang-jwt/jwt"
+	"e-comm/authService/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 )
-
-type UserRegisterBody struct {
-	Name          string
-	Surname       string
-	Email         string
-	Password      string
-	PasswordAgain string
-}
-
-type LoginBody struct {
-	Email    string
-	Password string
-	Type     string
-}
-
-type ChangePassword struct {
-	Token            string
-	OldPassword      string
-	NewPassword      string
-	NewPasswordAgain string
-}
 
 type AddressBody struct {
 	Title           string
@@ -56,37 +29,15 @@ type PaymentAddress struct {
 
 func UserRegisterPostHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var userBody UserRegisterBody
+		var userBody services.UserRegisterBody
 		if bodyErr := ctx.ShouldBindBodyWith(&userBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
-		if userBody.Password != userBody.PasswordAgain {
-			fmt.Println("passwords does not match")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "passwords does not match"})
-			return
-		}
 
-		user, mongoErr := mongodb.FindOneUser(userBody.Email)
-		if mongoErr != nil {
-			fmt.Println("mongodb (findOne): ", mongoErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-		if user != nil {
-			fmt.Println("email already registered")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "email already registered"})
-			return
-		}
-
-		salt := dotEnv.GoDotEnvVariable("SALT")
-		saltedPassword := userBody.Password + salt
-		hash, _ := bcrypt.HashPassword(saltedPassword)
-
-		insertErr := mongodb.InsertOneUser(userBody.Name, userBody.Surname, userBody.Email, hash)
-		if insertErr != nil {
-			fmt.Println("mongodb (insert): ", insertErr)
+		if registerErr := services.UserRegister(userBody); registerErr != nil {
+			fmt.Println("UserRegister: ", registerErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
@@ -98,51 +49,22 @@ func UserRegisterPostHandler() gin.HandlerFunc {
 
 func UserLoginPostHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var userBody LoginBody
+		var userBody services.LoginBody
 		if bodyErr := ctx.ShouldBindBodyWith(&userBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		user, mongoErr := mongodb.FindOneUser(userBody.Email)
-		if mongoErr != nil {
-			fmt.Println("mongodb (findOne): ", mongoErr)
+		token, loginErr := services.UserLogin(userBody)
+		if loginErr != nil {
+			fmt.Println("UserLogin: ", loginErr)
 			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-		if user == nil {
-			fmt.Println("email not registered")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong credentials"})
-			return
-		}
-
-		salt := dotEnv.GoDotEnvVariable("SALT")
-		saltedPassword := userBody.Password + salt
-		match := bcrypt.CheckPasswordHash(saltedPassword, user.Password)
-
-		if !match {
-			fmt.Println("wrong password")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong credentials"})
-		}
-
-		secretToken := dotEnv.GoDotEnvVariable("TOKEN")
-		hmacSampleSecret := []byte(secretToken)
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"mail": userBody.Email,
-			"type": userBody.Type,
-			"nbf":  time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
-		})
-		tokenString, tokenErr := token.SignedString(hmacSampleSecret)
-		if tokenErr != nil {
-			fmt.Println("token: ", tokenErr)
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "bad token"})
 			return
 		}
 
 		fmt.Println("User logged in: ", userBody.Email)
-		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": tokenString})
-
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": token})
 	}
 }
 
@@ -187,7 +109,7 @@ func GetUserInfo() gin.HandlerFunc {
 
 func ChangeUserPassword() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var passBody ChangePassword
+		var passBody services.ChangePassword
 		if bodyErr := ctx.ShouldBindBodyWith(&passBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -201,45 +123,14 @@ func ChangeUserPassword() gin.HandlerFunc {
 			return
 		}
 
-		user, findErr := mongodb.FindOneUser(auth.EMail)
-		if findErr != nil {
-			fmt.Println("mongodb (find): ", findErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		salt := dotEnv.GoDotEnvVariable("SALT")
-		saltedPassword := passBody.OldPassword + salt
-		match := bcrypt.CheckPasswordHash(saltedPassword, user.Password)
-
-		fmt.Println(passBody)
-
-		if !match {
-			fmt.Println("old password does not match")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong old password"})
-			return
-		}
-
-		if passBody.NewPassword != passBody.NewPasswordAgain {
-			fmt.Println("passwords does not match")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "passwords does not match"})
-			return
-		}
-		newSalt := dotEnv.GoDotEnvVariable("SALT")
-		newSaltedPassword := passBody.NewPassword + newSalt
-		newHash, _ := bcrypt.HashPassword(newSaltedPassword)
-
-		updateErr := mongodb.ChangeUserPassword(auth.EMail, newHash)
-		if updateErr != nil {
-			fmt.Println("mongodb (insert): ", updateErr)
+		if changePassErr := services.ChangeUserPassword(passBody, auth.EMail); changePassErr != nil {
+			fmt.Println("ChangeUserPassword:", changePassErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
 		fmt.Println("User changed password: ", auth.EMail)
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
-
-		// ctx.JSON(http.StatusOK, gin.H{"message": "OK", "userInfo": user})
 	}
 }
 

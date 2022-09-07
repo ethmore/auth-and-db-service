@@ -3,29 +3,14 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"time"
-
-	"e-comm/authService/bcrypt"
-	"e-comm/authService/dotEnv"
 
 	"e-comm/authService/middleware"
-
 	"e-comm/authService/repositories/postgresql"
-
-	"github.com/golang-jwt/jwt"
+	"e-comm/authService/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 )
-
-type SellerRegisterBody struct {
-	CompanyName   string
-	Email         string
-	Password      string
-	PasswordAgain string
-	Address       string
-	PhoneNumber   string
-}
 
 type Product struct {
 	Token       string
@@ -37,39 +22,27 @@ type Product struct {
 	Photo       string
 }
 
+type ProductsSeller struct {
+	Token      string
+	ProductIDs []string
+}
+
+type ProductAndSeller struct {
+	ProductID string
+	Seller    string
+}
+
 func SellerRegisterPostHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var sellerBody SellerRegisterBody
+		var sellerBody services.SellerRegisterBody
 		if bodyErr := ctx.ShouldBindBodyWith(&sellerBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
-		if sellerBody.Password != sellerBody.PasswordAgain {
-			fmt.Println("passwords does not match")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "passwords does not match"})
-			return
-		}
 
-		sellerFromDB, getErr := postgresql.GetSeller(sellerBody.Email)
-		if getErr != nil {
-			fmt.Println("postgresql (get): ", getErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-		if sellerFromDB.Email == sellerBody.Email {
-			fmt.Println("email already registered")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "email already registered"})
-			return
-		}
-
-		salt := dotEnv.GoDotEnvVariable("SALT")
-		saltedPassword := sellerBody.Password + salt
-		hash, _ := bcrypt.HashPassword(saltedPassword)
-
-		insertErr := postgresql.Insert(sellerBody.CompanyName, sellerBody.Email, hash, sellerBody.Address, sellerBody.PhoneNumber)
-		if insertErr != nil {
-			fmt.Println("postgresql (insert): ", insertErr)
+		if registerErr := services.SellerRegister(sellerBody); registerErr != nil {
+			fmt.Println("SellerRegister: ", registerErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
@@ -81,50 +54,22 @@ func SellerRegisterPostHandler() gin.HandlerFunc {
 
 func SellerLoginPostHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var sellerBody LoginBody
+		var sellerBody services.LoginBody
 		if bodyErr := ctx.ShouldBindBodyWith(&sellerBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		seller, pqErr := postgresql.GetSeller(sellerBody.Email)
-		if pqErr != nil {
-			fmt.Println("postgresql (insert): ", pqErr)
+		token, loginErr := services.SellerLogin(sellerBody)
+		if loginErr != nil {
+			fmt.Println("SellerLogin: ", loginErr)
 			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-		if seller.Email != sellerBody.Email {
-			fmt.Println("email not registered")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong credentials"})
-			return
-		}
-
-		salt := dotEnv.GoDotEnvVariable("SALT")
-		saltedPassword := sellerBody.Password + salt
-		match := bcrypt.CheckPasswordHash(saltedPassword, seller.Password)
-		if !match {
-			fmt.Println("wrong password")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "wrong credentials"})
-			return
-		}
-
-		secretToken := dotEnv.GoDotEnvVariable("TOKEN")
-		hmacSampleSecret := []byte(secretToken)
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"mail": sellerBody.Email,
-			"type": sellerBody.Type,
-			"nbf":  time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
-		})
-		tokenString, tokenErr := token.SignedString(hmacSampleSecret)
-		if tokenErr != nil {
-			fmt.Println("token: ", tokenErr)
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "bad token"})
 			return
 		}
 
 		fmt.Println("Seller logged in: ", sellerBody.Email)
-		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": tokenString})
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "token": token})
 	}
 }
 
@@ -235,27 +180,6 @@ func DeleteProduct() gin.HandlerFunc {
 		fmt.Println("Seller: ", auth.EMail, " - Delete a product:", requestBody.Id)
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 	}
-}
-
-func GetAllProducts() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		products, err := postgresql.GetAllProducts()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		ctx.JSON(http.StatusOK, gin.H{"products": products})
-	}
-}
-
-type ProductsSeller struct {
-	Token      string
-	ProductIDs []string
-}
-
-type ProductAndSeller struct {
-	ProductID string
-	Seller    string
 }
 
 func GetProductsSellers() gin.HandlerFunc {
