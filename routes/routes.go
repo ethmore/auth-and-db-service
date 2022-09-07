@@ -34,8 +34,8 @@ func PrivateRoutes(g *gin.RouterGroup) {
 	g.POST("/getCartInfo", controllers.GetCartInfo())
 	g.POST("/removeProductFromCart", controllers.RemoveProductFromCart())
 	g.POST("/changeProductQty", controllers.ChangeProductQty())
-	g.POST("/increaseProductQty", controllers.IncreaseProductQty())
-	g.POST("/decreaseProductQty", controllers.DecreaseProductQty())
+	// g.POST("/increaseProductQty", controllers.IncreaseProductQty())
+	// g.POST("/decreaseProductQty", controllers.DecreaseProductQty())
 	g.POST("/addTotalToCart", controllers.AddTotalToCart())
 	g.POST("/getTotalPrice", controllers.GetTotalPrice())
 

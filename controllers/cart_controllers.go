@@ -55,7 +55,7 @@ func AddProductToCart() gin.HandlerFunc {
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
-		// mongodb.NewCart(auth.EMail)
+
 		addErr := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
 		if addErr == mongo.ErrNoDocuments {
 			if err := mongodb.NewCart(auth.EMail); err != nil {
@@ -224,58 +224,6 @@ func ChangeProductQty() gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
-	}
-}
-
-func IncreaseProductQty() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var body CartRequest
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		auth, authErr := middleware.UserAuth(ctx)
-		if authErr != nil {
-			fmt.Println("auth: ", authErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		incErr := mongodb.IncreaseProductQty(auth.EMail, body.Id)
-		if incErr != nil {
-			fmt.Println("mongodb (inc): ", incErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
-	}
-}
-
-func DecreaseProductQty() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var body CartRequest
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		auth, authErr := middleware.UserAuth(ctx)
-		if authErr != nil {
-			fmt.Println("auth: ", authErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		decErr := mongodb.DecreaseProductQty(auth.EMail, body.Id)
-		if decErr != nil {
-			fmt.Println("mongodb (dec): ", decErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 	}
 }

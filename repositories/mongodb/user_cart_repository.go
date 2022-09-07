@@ -5,7 +5,6 @@ import (
 	"e-comm/authService/repositories/postgresql"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -122,48 +121,6 @@ func UpdateCartProducts(userId primitive.ObjectID, newProducts []Product) error 
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "products", Value: newProducts}}}}
 
 	_, err := coll.UpdateOne(context.TODO(), filter, update)
-	return err
-}
-
-func IncreaseProductQty(userMail, productId string) error {
-	cart, findErr := FindAllCartProducts(userMail)
-	if findErr != nil {
-		fmt.Println("mongodb (remove): ", findErr)
-		return findErr
-	}
-
-	i := slices.IndexFunc(cart.Products, func(c Product) bool { return c.Id == productId })
-	qtyInt, toIntErr := strconv.Atoi(cart.Products[i].Qty)
-	if toIntErr != nil {
-		fmt.Println("conversion: ", toIntErr)
-	}
-	qtyInt++
-	qtyStr := strconv.Itoa(qtyInt)
-
-	cart.Products[i].Qty = qtyStr
-	err := UpdateCartProducts(cart.UserId, cart.Products)
-	fmt.Println(cart.Products[i].Qty)
-	return err
-}
-
-func DecreaseProductQty(userMail, productId string) error {
-	cart, findErr := FindAllCartProducts(userMail)
-	if findErr != nil {
-		fmt.Println("mongodb (remove): ", findErr)
-		return findErr
-	}
-
-	i := slices.IndexFunc(cart.Products, func(c Product) bool { return c.Id == productId })
-	qtyInt, toIntErr := strconv.Atoi(cart.Products[i].Qty)
-	if toIntErr != nil {
-		fmt.Println("conversion: ", toIntErr)
-	}
-	qtyInt--
-	qtyStr := strconv.Itoa(qtyInt)
-
-	cart.Products[i].Qty = qtyStr
-	err := UpdateCartProducts(cart.UserId, cart.Products)
-	fmt.Println(cart.Products[i].Qty)
 	return err
 }
 
