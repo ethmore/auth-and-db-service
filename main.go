@@ -1,8 +1,7 @@
 package main
 
 import (
-	// "net/http"
-
+	"e-comm/authService/dotEnv"
 	"e-comm/authService/repositories/mongodb"
 	"e-comm/authService/repositories/postgresql"
 	"e-comm/authService/routes"
@@ -11,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// var client http.Client
-
 func main() {
 	go postgresql.Connect()
 	go mongodb.Connect()
@@ -20,7 +17,7 @@ func main() {
 	router := gin.Default()
 
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3001/seller-register", "http://localhost:3001"}
+	config.AllowOrigins = []string{dotEnv.GoDotEnvVariable("BFF_URL")}
 	router.Use(cors.New(config))
 
 	public := router.Group("/")

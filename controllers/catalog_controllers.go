@@ -40,7 +40,7 @@ func GetAllProducts() gin.HandlerFunc {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(products)
+
 		ctx.JSON(http.StatusOK, gin.H{"products": products})
 	}
 }
