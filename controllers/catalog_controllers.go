@@ -23,13 +23,14 @@ func GetProduct() gin.HandlerFunc {
 			return
 		}
 
-		products, pqErr := postgresql.GetProduct(requestBody.Id)
+		product, pqErr := postgresql.GetProduct(requestBody.Id)
 		if pqErr != nil {
 			fmt.Println("postgresql (get)", pqErr, "req id: ", requestBody.Id)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
-		ctx.JSON(http.StatusOK, gin.H{"products": products})
+		fmt.Println(product)
+		ctx.JSON(http.StatusOK, gin.H{"product": product})
 	}
 }
 
