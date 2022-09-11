@@ -96,6 +96,21 @@ func AddProduct() gin.HandlerFunc {
 			return
 		}
 
+		var searchBody = services.SearchProduct{
+			Id:          requestBody.Id,
+			Title:       requestBody.Title,
+			Price:       requestBody.Price,
+			Description: requestBody.Description,
+			Image:       requestBody.Photo,
+			Stock:       requestBody.Stock,
+		}
+		searchIndexErr := services.AddProductToSearchService(searchBody)
+		if searchIndexErr != nil {
+			fmt.Println("AddProductToSearchService ", searchIndexErr)
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+
 		fmt.Println("Seller: ", auth.EMail, " - Added new product:", requestBody.Title)
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "mail": auth.EMail, "type": auth.Type})
 	}
