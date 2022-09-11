@@ -1,9 +1,7 @@
 package postgresql
 
 import (
-	// "database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -24,7 +22,6 @@ func InsertProduct(sellerMail, title, price, description, photo, stock string) e
 }
 
 func UpdateProduct(title, price, description, photo, stock, id string) error {
-	fmt.Println(title, price, description, photo, stock, id)
 	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where id=$6`
 	_, err := db.Exec(updateStmt, title, price, description, photo, stock, id)
 	return err
@@ -74,7 +71,6 @@ func GetSellerProducts(eMail string) ([]Product, error) {
 		return nil, err
 	}
 
-	// fmt.Println(products)
 	return products, nil
 }
 
@@ -101,7 +97,6 @@ func GetAllProducts() ([]Product, error) {
 		return nil, err
 	}
 
-	// fmt.Println(products)
 	return products, nil
 }
 
@@ -114,6 +109,5 @@ func GetProduct(id string) (*Product, error) {
 		return nil, err
 	}
 
-	// fmt.Println(product)
 	return &product, nil
 }
