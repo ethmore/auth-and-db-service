@@ -40,7 +40,7 @@ type CartInfo struct {
 	TotalCartPrice string
 }
 
-func AddProductToCart() gin.HandlerFunc {
+func AddProductToCart(postgresqlRepo postgresql.IPostgreSQL) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		auth, authErr := middleware.UserAuth(ctx)
 		if authErr != nil {
@@ -56,7 +56,7 @@ func AddProductToCart() gin.HandlerFunc {
 			return
 		}
 
-		addErr := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+		addErr := mongodb.AddProductToCart(postgresqlRepo, auth.EMail, cartRequest.Id, cartRequest.Qty)
 		if addErr == mongo.ErrNoDocuments {
 			if err := mongodb.NewCart(auth.EMail); err != nil {
 				fmt.Println("mongodb (new-cart): ", err)
@@ -64,7 +64,7 @@ func AddProductToCart() gin.HandlerFunc {
 				return
 			}
 
-			err := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+			err := mongodb.AddProductToCart(postgresqlRepo, auth.EMail, cartRequest.Id, cartRequest.Qty)
 			if err != nil {
 				fmt.Println("mongodb (add-2): ", addErr)
 				ctx.Status(http.StatusInternalServerError)
@@ -84,14 +84,14 @@ func AddProductToCart() gin.HandlerFunc {
 	}
 }
 
-func GetCartInfo() gin.HandlerFunc {
+func GetCartInfo(postgresqlRepo postgresql.IPostgreSQL) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body Body
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
+		// var body Body
+		// if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
+		// 	fmt.Println("body: ", bodyErr)
+		// 	ctx.Status(http.StatusInternalServerError)
+		// 	return
+		// }
 
 		auth, authErr := middleware.UserAuth(ctx)
 		if authErr != nil {
@@ -109,7 +109,7 @@ func GetCartInfo() gin.HandlerFunc {
 
 		var cartInfo CartInfo
 		for i := 0; i < len(cart.Products); i++ {
-			product, getErr := postgresql.GetProduct(cart.Products[i].Id)
+			product, getErr := postgresqlRepo.GetProduct(cart.Products[i].Id)
 			if getErr != nil {
 				fmt.Println("postgresql (get): ", getErr)
 				ctx.Status(http.StatusInternalServerError)
@@ -149,12 +149,12 @@ func GetCartInfo() gin.HandlerFunc {
 
 func GetCartProducts() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body Body
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
+		// var body Body
+		// if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
+		// 	fmt.Println("body: ", bodyErr)
+		// 	ctx.Status(http.StatusInternalServerError)
+		// 	return
+		// }
 
 		auth, authErr := middleware.UserAuth(ctx)
 		if authErr != nil {
@@ -256,13 +256,13 @@ func AddTotalToCart() gin.HandlerFunc {
 
 func GetTotalPrice() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body PurchaseBody
+		// var body PurchaseBody
 
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
+		// if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
+		// 	fmt.Println("body: ", bodyErr)
+		// 	ctx.Status(http.StatusInternalServerError)
+		// 	return
+		// }
 
 		auth, authErr := middleware.UserAuth(ctx)
 		if authErr != nil {

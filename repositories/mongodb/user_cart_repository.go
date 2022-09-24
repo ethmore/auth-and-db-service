@@ -24,12 +24,12 @@ type Cart struct {
 	TotalPrice string
 }
 
-func AddProductToCart(userMail, productId, qty string) error {
+func AddProductToCart(postgresqlRepo postgresql.IPostgreSQL, userMail, productId, qty string) error {
 	if productId == "" {
 		return errors.New("empty product id")
 	}
 
-	product, getErr := postgresql.GetProduct(productId)
+	product, getErr := postgresqlRepo.GetProduct(productId)
 	if getErr != nil {
 		return getErr
 	}

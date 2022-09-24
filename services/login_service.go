@@ -49,8 +49,8 @@ func UserLogin(userBody LoginBody) (string, error) {
 	return tokenString, nil
 }
 
-func SellerLogin(sellerBody LoginBody) (string, error) {
-	seller, pqErr := postgresql.GetSeller(sellerBody.Email)
+func SellerLogin(postgresqlRepo postgresql.IPostgreSQL, sellerBody LoginBody) (string, error) {
+	seller, pqErr := postgresqlRepo.GetSeller(sellerBody.Email)
 	if pqErr != nil {
 		return "", pqErr
 	}

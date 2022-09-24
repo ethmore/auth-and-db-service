@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-func InsertProduct(sellerMail, title, price, description, photo, stock string) error {
-	seller, err := GetSeller(sellerMail)
+func (p *Postgresql) InsertProduct(sellerMail, title, price, description, photo, stock string) error {
+	seller, err := p.GetSeller(sellerMail)
 	if err != nil {
 		return err
 	}
@@ -21,13 +21,13 @@ func InsertProduct(sellerMail, title, price, description, photo, stock string) e
 	}
 }
 
-func UpdateProduct(title, price, description, photo, stock, id string) error {
+func (p *Postgresql) UpdateProduct(title, price, description, photo, stock, id string) error {
 	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where id=$6`
 	_, err := db.Exec(updateStmt, title, price, description, photo, stock, id)
 	return err
 }
 
-func DeleteProduct(id string) error {
+func (p *Postgresql) DeleteProduct(id string) error {
 	deleteStmt := `delete from "products" where id=$1`
 	_, err := db.Exec(deleteStmt, id)
 	return err
@@ -43,8 +43,8 @@ type Product struct {
 	SellerID    string
 }
 
-func GetSellerProducts(eMail string) ([]Product, error) {
-	seller, err := GetSeller(eMail)
+func (p *Postgresql) GetSellerProducts(eMail string) ([]Product, error) {
+	seller, err := p.GetSeller(eMail)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func GetSellerProducts(eMail string) ([]Product, error) {
 	return products, nil
 }
 
-func GetAllProducts() ([]Product, error) {
+func (p *Postgresql) GetAllProducts() ([]Product, error) {
 	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products")
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func GetAllProducts() ([]Product, error) {
 	return products, nil
 }
 
-func GetProduct(id string) (*Product, error) {
+func (p *Postgresql) GetProduct(id string) (*Product, error) {
 	var product Product
 	idInt, _ := strconv.Atoi(id)
 

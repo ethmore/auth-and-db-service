@@ -14,7 +14,7 @@ type ProductResponse struct {
 	Id    string
 }
 
-func GetProduct() gin.HandlerFunc {
+func GetProduct(postgresqlRepo postgresql.IPostgreSQL) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var requestBody ProductResponse
 		if bodyErr := ctx.ShouldBindBodyWith(&requestBody, binding.JSON); bodyErr != nil {
@@ -23,7 +23,7 @@ func GetProduct() gin.HandlerFunc {
 			return
 		}
 
-		product, pqErr := postgresql.GetProduct(requestBody.Id)
+		product, pqErr := postgresqlRepo.GetProduct(requestBody.Id)
 		if pqErr != nil {
 			fmt.Println("postgresql (get)", pqErr, "req id: ", requestBody.Id)
 			ctx.Status(http.StatusInternalServerError)
@@ -34,9 +34,9 @@ func GetProduct() gin.HandlerFunc {
 	}
 }
 
-func GetAllProducts() gin.HandlerFunc {
+func GetAllProducts(postgresqlRepo postgresql.IPostgreSQL) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		products, err := postgresql.GetAllProducts()
+		products, err := postgresqlRepo.GetAllProducts()
 		if err != nil {
 			fmt.Println(err)
 			return

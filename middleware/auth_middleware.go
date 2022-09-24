@@ -22,14 +22,6 @@ type Authentication struct {
 }
 
 func UserAuth(c *gin.Context) (*Authentication, error) {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		fmt.Println("Recovered in f", r)
-	// 		fmt.Println("User not logged in")
-	// 		c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
-	// 	}
-	// }()
-
 	var tokenBody TokenBody
 	if err := c.ShouldBindBodyWith(&tokenBody, binding.JSON); err != nil {
 		log.Printf("%+v", err)

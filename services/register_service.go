@@ -50,12 +50,12 @@ func UserRegister(userBody UserRegisterBody) error {
 	return nil
 }
 
-func SellerRegister(sellerBody SellerRegisterBody) error {
+func SellerRegister(postgresqlRepo postgresql.IPostgreSQL, sellerBody SellerRegisterBody) error {
 	if sellerBody.Password != sellerBody.PasswordAgain {
 		return errors.New("passwords does not match")
 	}
 
-	sellerFromDB, getErr := postgresql.GetSeller(sellerBody.Email)
+	sellerFromDB, getErr := postgresqlRepo.GetSeller(sellerBody.Email)
 	if getErr != nil {
 		return getErr
 	}
@@ -67,7 +67,7 @@ func SellerRegister(sellerBody SellerRegisterBody) error {
 	saltedPassword := sellerBody.Password + salt
 	hash, _ := bcrypt.HashPassword(saltedPassword)
 
-	insertErr := postgresql.Insert(sellerBody.CompanyName, sellerBody.Email, hash, sellerBody.Address, sellerBody.PhoneNumber)
+	insertErr := postgresqlRepo.Insert(sellerBody.CompanyName, sellerBody.Email, hash, sellerBody.Address, sellerBody.PhoneNumber)
 	if insertErr != nil {
 		return insertErr
 	}
