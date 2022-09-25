@@ -27,6 +27,12 @@ type PaymentAddress struct {
 	AddressId string
 }
 
+func Test() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
+	}
+}
+
 func UserRegisterPostHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var userBody services.UserRegisterBody
