@@ -1,10 +1,10 @@
 package main
 
 import (
-	"e-comm/authService/dotEnv"
-	"e-comm/authService/repositories/mongodb"
-	"e-comm/authService/repositories/postgresql"
-	"e-comm/authService/routes"
+	"auth-and-db-service/dotEnv"
+	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/repositories/postgresql"
+	"auth-and-db-service/routes"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

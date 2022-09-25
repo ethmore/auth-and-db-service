@@ -1,10 +1,10 @@
 package services
 
 import (
-	"e-comm/authService/bcrypt"
-	"e-comm/authService/dotEnv"
-	"e-comm/authService/repositories/mongodb"
-	"e-comm/authService/repositories/postgresql"
+	"auth-and-db-service/bcrypt"
+	"auth-and-db-service/dotEnv"
+	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/repositories/postgresql"
 	"errors"
 	"time"
 

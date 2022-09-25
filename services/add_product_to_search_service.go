@@ -1,8 +1,8 @@
 package services
 
 import (
+	"auth-and-db-service/dotEnv"
 	"bytes"
-	"e-comm/authService/dotEnv"
 	"encoding/json"
 	"fmt"
 	"io"

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"e-comm/authService/middleware"
-	"e-comm/authService/repositories/mongodb"
-	"e-comm/authService/services"
+	"auth-and-db-service/middleware"
+	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"

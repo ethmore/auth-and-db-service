@@ -1,8 +1,8 @@
 package mongodb
 
 import (
+	"auth-and-db-service/repositories/postgresql"
 	"context"
-	"e-comm/authService/repositories/postgresql"
 	"errors"
 	"fmt"
 

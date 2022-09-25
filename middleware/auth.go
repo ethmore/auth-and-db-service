@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"e-comm/authService/dotEnv"
+	"auth-and-db-service/dotEnv"
 	"errors"
 
 	"github.com/gin-gonic/gin"

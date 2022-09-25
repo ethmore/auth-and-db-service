@@ -1,9 +1,9 @@
 package services
 
 import (
-	"e-comm/authService/bcrypt"
-	"e-comm/authService/dotEnv"
-	"e-comm/authService/repositories/mongodb"
+	"auth-and-db-service/bcrypt"
+	"auth-and-db-service/dotEnv"
+	"auth-and-db-service/repositories/mongodb"
 	"errors"
 )
 

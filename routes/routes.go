@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"e-comm/authService/controllers"
+	"auth-and-db-service/controllers"
 
 	"github.com/gin-gonic/gin"
 )

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"e-comm/authService/dotEnv"
+	"auth-and-db-service/dotEnv"
 
 	_ "github.com/lib/pq"
 )

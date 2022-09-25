@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"e-comm/authService/middleware"
-	"e-comm/authService/repositories/mongodb"
-	"e-comm/authService/repositories/postgresql"
+	"auth-and-db-service/middleware"
+	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/repositories/postgresql"
 	"fmt"
 	"net/http"
 	"strconv"

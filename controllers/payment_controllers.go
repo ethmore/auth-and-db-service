@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"e-comm/authService/repositories/postgresql"
+	"auth-and-db-service/repositories/postgresql"
 	"fmt"
 	"net/http"
 

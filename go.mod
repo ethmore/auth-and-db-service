@@ -1,4 +1,4 @@
-module e-comm/authService
+module auth-and-db-service
 
 go 1.18
 

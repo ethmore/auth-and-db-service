@@ -3,7 +3,7 @@ package mongodb
 import (
 	"fmt"
 
-	"e-comm/authService/dotEnv"
+	"auth-and-db-service/dotEnv"
 	"sync"
 
 	"context"
