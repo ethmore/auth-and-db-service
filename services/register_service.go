@@ -25,12 +25,12 @@ type SellerRegisterBody struct {
 	PhoneNumber   string
 }
 
-func UserRegister(userBody UserRegisterBody) error {
+func UserRegister(ur mongodb.IUsersRepo, userBody UserRegisterBody) error {
 	if userBody.Password != userBody.PasswordAgain {
 		return errors.New("passwords does not match")
 	}
 
-	user, mongoErr := mongodb.FindOneUser(userBody.Email)
+	user, mongoErr := ur.FindOneUser(userBody.Email)
 	if mongoErr != nil {
 		return mongoErr
 	}
@@ -42,7 +42,7 @@ func UserRegister(userBody UserRegisterBody) error {
 	saltedPassword := userBody.Password + salt
 	hash, _ := bcrypt.HashPassword(saltedPassword)
 
-	insertErr := mongodb.InsertOneUser(userBody.Name, userBody.Surname, userBody.Email, hash)
+	insertErr := ur.InsertOneUser(userBody.Name, userBody.Surname, userBody.Email, hash)
 	if insertErr != nil {
 		return insertErr
 	}
@@ -50,12 +50,12 @@ func UserRegister(userBody UserRegisterBody) error {
 	return nil
 }
 
-func SellerRegister(sellerBody SellerRegisterBody) error {
+func SellerRegister(sellerRepo postgresql.ISellerRepo, sellerBody SellerRegisterBody) error {
 	if sellerBody.Password != sellerBody.PasswordAgain {
 		return errors.New("passwords does not match")
 	}
 
-	sellerFromDB, getErr := postgresql.GetSeller(sellerBody.Email)
+	sellerFromDB, getErr := sellerRepo.GetSeller(sellerBody.Email)
 	if getErr != nil {
 		return getErr
 	}
@@ -67,7 +67,7 @@ func SellerRegister(sellerBody SellerRegisterBody) error {
 	saltedPassword := sellerBody.Password + salt
 	hash, _ := bcrypt.HashPassword(saltedPassword)
 
-	insertErr := postgresql.Insert(sellerBody.CompanyName, sellerBody.Email, hash, sellerBody.Address, sellerBody.PhoneNumber)
+	insertErr := sellerRepo.Insert(sellerBody.CompanyName, sellerBody.Email, hash, sellerBody.Address, sellerBody.PhoneNumber)
 	if insertErr != nil {
 		return insertErr
 	}

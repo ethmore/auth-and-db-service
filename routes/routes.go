@@ -2,49 +2,68 @@ package routes
 
 import (
 	"auth-and-db-service/controllers"
+	"auth-and-db-service/middleware"
+	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/repositories/postgresql"
 
 	"github.com/gin-gonic/gin"
 )
 
 func PublicRoutes(g *gin.RouterGroup) {
+	sellerRepo := &postgresql.SellerRepo{}
+	productRepo := &postgresql.ProductRepo{}
+
+	usersRepo := &mongodb.UsersRepo{}
+
 	g.GET("/test", controllers.Test())
-	g.POST("/sellerRegister", controllers.SellerRegisterPostHandler())
-	g.POST("/userRegister", controllers.UserRegisterPostHandler())
-	g.POST("/sellerLogin", controllers.SellerLoginPostHandler())
-	g.POST("/userLogin", controllers.UserLoginPostHandler())
-	g.POST("/getAllProducts", controllers.GetAllProducts())
-	g.POST("/getProduct", controllers.GetProduct())
+	g.POST("/sellerRegister", controllers.SellerRegisterPostHandler(sellerRepo))
+	g.POST("/userRegister", controllers.UserRegisterPostHandler(usersRepo))
+	g.POST("/sellerLogin", controllers.SellerLoginPostHandler(sellerRepo))
+	g.POST("/userLogin", controllers.UserLoginPostHandler(usersRepo))
+	g.POST("/getAllProducts", controllers.GetAllProducts(productRepo))
+	g.POST("/getProduct", controllers.GetProduct(productRepo))
 }
 
 func PrivateRoutes(g *gin.RouterGroup) {
-	g.POST("/profile", controllers.UserProfile())
-	g.POST("/getUserInfo", controllers.GetUserInfo())
-	g.POST("/changeUserPassword", controllers.ChangeUserPassword())
+	authenticator := &middleware.UserAuthenticator{}
 
-	g.POST("/addProduct", controllers.AddProduct())
-	g.POST("/getProducts", controllers.GetSellerProducts())
-	g.POST("/deleteProduct", controllers.DeleteProduct())
-	g.POST("/editProduct", controllers.EditProduct())
+	sellerRepo := &postgresql.SellerRepo{}
+	productRepo := &postgresql.ProductRepo{}
+	paymentRepo := &postgresql.PaymentRepo{}
+	orderRepo := &postgresql.OrderRepo{}
 
-	g.POST("/newUserAddress", controllers.NewUserAddress())
-	g.POST("/getUserAddressById", controllers.GetUserAddressById())
-	g.POST("/getUserAddresses", controllers.GetUserAddresses())
+	usersRepo := &mongodb.UsersRepo{}
+	usersAddressRepo := &mongodb.UserAddressesRepo{}
+	usersCartRepo := &mongodb.UserCartRepo{}
 
-	g.POST("/addProductToCart", controllers.AddProductToCart())
-	g.POST("/getCartProducts", controllers.GetCartProducts())
-	g.POST("/getCartInfo", controllers.GetCartInfo())
-	g.POST("/removeProductFromCart", controllers.RemoveProductFromCart())
-	g.POST("/changeProductQty", controllers.ChangeProductQty())
-	g.POST("/addTotalToCart", controllers.AddTotalToCart())
-	g.POST("/getTotalPrice", controllers.GetTotalPrice())
+	g.POST("/profile", controllers.UserProfile(authenticator))
+	g.POST("/getUserInfo", controllers.GetUserInfo(authenticator, usersRepo))
+	g.POST("/changeUserPassword", controllers.ChangeUserPassword(authenticator, usersRepo))
 
-	g.POST("/clearCart", controllers.ClearCart())
+	g.POST("/addProduct", controllers.AddProduct(authenticator, productRepo, sellerRepo))
+	g.POST("/getProducts", controllers.GetSellerProducts(authenticator, productRepo, sellerRepo))
+	g.POST("/deleteProduct", controllers.DeleteProduct(authenticator, productRepo))
+	g.POST("/editProduct", controllers.EditProduct(authenticator, productRepo))
 
-	g.POST("/createPayment", controllers.CreatePayment())
-	g.POST("/updatePaymentStatus", controllers.UpdatePaymentStatus())
+	g.POST("/newUserAddress", controllers.NewUserAddress(authenticator, usersRepo, usersAddressRepo))
+	g.POST("/getUserAddressById", controllers.GetUserAddressById(authenticator, usersAddressRepo))
+	g.POST("/getUserAddresses", controllers.GetUserAddresses(authenticator, usersRepo, usersAddressRepo))
 
-	g.POST("/getProductsSellers", controllers.GetProductsSellers())
+	g.POST("/addProductToCart", controllers.AddProductToCart(authenticator, productRepo, usersRepo, usersCartRepo))
+	g.POST("/getCartProducts", controllers.GetCartProducts(authenticator, usersRepo, usersCartRepo))
+	g.POST("/getCartInfo", controllers.GetCartInfo(authenticator, productRepo, usersRepo, usersCartRepo))
+	g.POST("/removeProductFromCart", controllers.RemoveProductFromCart(authenticator, usersRepo, usersCartRepo))
+	g.POST("/changeProductQty", controllers.ChangeProductQty(authenticator, usersRepo, usersCartRepo))
+	g.POST("/addTotalToCart", controllers.AddTotalToCart(authenticator, usersRepo, usersCartRepo))
+	g.POST("/getTotalPrice", controllers.GetTotalPrice(authenticator, usersRepo, usersCartRepo))
 
-	g.POST("/insertOrder", controllers.InsertOrder())
-	g.POST("/getAllOrders", controllers.GetAllOrders())
+	g.POST("/clearCart", controllers.ClearCart(authenticator, usersRepo, usersCartRepo))
+
+	g.POST("/createPayment", controllers.CreatePayment(paymentRepo))
+	g.POST("/updatePaymentStatus", controllers.UpdatePaymentStatus(paymentRepo))
+
+	g.POST("/getProductsSellers", controllers.GetProductsSellers(authenticator, productRepo, sellerRepo))
+
+	g.POST("/insertOrder", controllers.InsertOrder(authenticator, orderRepo, usersRepo))
+	g.POST("/getAllOrders", controllers.GetAllOrders(authenticator, orderRepo, usersRepo))
 }

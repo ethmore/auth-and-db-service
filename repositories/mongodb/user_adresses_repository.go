@@ -20,8 +20,18 @@ type Address struct {
 	DetailedAddress string
 }
 
-func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, province, county, address string) error {
-	user, err1 := FindOneUser(userMail)
+type IUserAddressesRepo interface {
+	InsertUserAddress(userRepo IUsersRepo, userMail, addressName, name, surname, phoneNumber, province, county, address string) error
+	UpdateUserAdress(addressName, name, surname, phoneNumber, province, county, address string) error
+	DeleteUserAddress(userMail, addressName string) error
+	FindUserAddress(addressID string) (*Address, error)
+	FindAllUserAddresses(userRepo IUsersRepo, userMail string) ([]Address, error)
+}
+
+type UserAddressesRepo struct{}
+
+func (uar UserAddressesRepo) InsertUserAddress(userRepo IUsersRepo, userMail, addressName, name, surname, phoneNumber, province, county, address string) error {
+	user, err1 := userRepo.FindOneUser(userMail)
 	if err1 != nil {
 		return err1
 	}
@@ -32,7 +42,7 @@ func InsertUserAddress(userMail, addressName, name, surname, phoneNumber, provin
 	return err
 }
 
-func UpdateUserAdress(addressName, name, surname, phoneNumber, province, county, address string) error {
+func (uar UserAddressesRepo) UpdateUserAdress(addressName, name, surname, phoneNumber, province, county, address string) error {
 	coll := client.Database("eCommUsers").Collection("userAddresses")
 	filter := bson.D{{Key: "addressName", Value: addressName}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "surname", Value: surname}, {Key: "phoneNumber", Value: phoneNumber}, {Key: "province", Value: province}, {Key: "county", Value: county}, {Key: "address", Value: address}}}}
@@ -41,7 +51,7 @@ func UpdateUserAdress(addressName, name, surname, phoneNumber, province, county,
 	return err
 }
 
-func DeleteUserAddress(userMail, addressName string) error {
+func (uar UserAddressesRepo) DeleteUserAddress(userMail, addressName string) error {
 	coll := client.Database("eCommUsers").Collection("userAddresses")
 	filter := bson.D{{Key: "addressName", Value: addressName}}
 
@@ -49,7 +59,7 @@ func DeleteUserAddress(userMail, addressName string) error {
 	return err
 }
 
-func FindUserAddress(addressID string) (*Address, error) {
+func (uar UserAddressesRepo) FindUserAddress(addressID string) (*Address, error) {
 	addressID = strings.TrimSpace(addressID)
 	objID, convErr := primitive.ObjectIDFromHex(addressID)
 	if convErr != nil {
@@ -83,9 +93,9 @@ func FindUserAddress(addressID string) (*Address, error) {
 	return &address, nil
 }
 
-func FindAllUserAddresses(userMail string) ([]Address, error) {
+func (uar UserAddressesRepo) FindAllUserAddresses(userRepo IUsersRepo, userMail string) ([]Address, error) {
 	// var address Address
-	user, findErr := FindOneUser(userMail)
+	user, findErr := userRepo.FindOneUser(userMail)
 	if findErr != nil {
 		return nil, findErr
 	}

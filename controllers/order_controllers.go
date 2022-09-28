@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-func InsertOrder() gin.HandlerFunc {
+func InsertOrder(authenticator middleware.IUserAuthenticator, orderRepo postgresql.IOrderRepo, userRepo mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var orderBody postgresql.Order
 		if err := ctx.ShouldBindBodyWith(&orderBody, binding.JSON); err != nil {
@@ -21,21 +21,21 @@ func InsertOrder() gin.HandlerFunc {
 			return
 		}
 
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
 			return
 		}
 
-		user, userErr := mongodb.FindOneUser(auth.EMail)
+		user, userErr := userRepo.FindOneUser(auth.EMail)
 		if userErr != nil {
 			fmt.Println("userErr: ", userErr)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
 			return
 		}
 
-		id, err := postgresql.InsertOrder(user.Id, orderBody)
+		id, err := orderRepo.InsertOrder(user.Id, orderBody)
 		if err != nil {
 			fmt.Println("insert order: ", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -47,16 +47,16 @@ func InsertOrder() gin.HandlerFunc {
 	}
 }
 
-func GetAllOrders() gin.HandlerFunc {
+func GetAllOrders(authenticator middleware.IUserAuthenticator, orderRepo postgresql.IOrderRepo, userRepo mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
 			return
 		}
 
-		user, userErr := mongodb.FindOneUser(auth.EMail)
+		user, userErr := userRepo.FindOneUser(auth.EMail)
 		if userErr != nil {
 			fmt.Println("userErr: ", userErr)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -64,7 +64,7 @@ func GetAllOrders() gin.HandlerFunc {
 		}
 
 		strID := user.Id.Hex()
-		orders, err := postgresql.GetAllOrders(strID)
+		orders, err := orderRepo.GetAllOrders(strID)
 		if err != nil {
 			fmt.Println("postgres (get order): ", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -73,7 +73,7 @@ func GetAllOrders() gin.HandlerFunc {
 
 		var newOrders []postgresql.Order
 		for _, j := range orders {
-			orderProducts, ordErr := postgresql.GetAllOrderProducts(j.ID)
+			orderProducts, ordErr := orderRepo.GetAllOrderProducts(j.ID)
 			if ordErr != nil {
 				fmt.Println("postgres (get order products): ", err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{})

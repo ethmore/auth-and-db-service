@@ -24,17 +24,45 @@ type Cart struct {
 	TotalPrice string
 }
 
-func AddProductToCart(userMail, productId, qty string) error {
+type IUserCartRepo interface {
+	NewCart(up IUsersRepo, userMail string) error
+	AddProductToCart(postgresqlRepo postgresql.IProductRepo, up IUsersRepo, userMail, productId, qty string) error
+	FindAllCartProducts(up IUsersRepo, userMail string) (*Cart, error)
+	RemoveProductFromCart(up IUsersRepo, userMail, productId string) error
+	UpdateCartProducts(userId primitive.ObjectID, newProducts []Product) error
+	ChangeProductQty(up IUsersRepo, userMail, productId, productQty string) error
+	AddTotalToCart(up IUsersRepo, userMail, totalPrice string) error
+	GetTotalPrice(up IUsersRepo, userMail string) (string, error)
+	ClearCart(up IUsersRepo, userMail string) error
+}
+
+type UserCartRepo struct{}
+
+func (ucr UserCartRepo) NewCart(up IUsersRepo, userMail string) error {
+	user, findErr := up.FindOneUser(userMail)
+	if findErr != nil {
+		fmt.Println("mongodb (find): ", findErr)
+		return findErr
+	}
+
+	coll := client.Database("eCommUsers").Collection("carts")
+	doc := bson.D{{Key: "userId", Value: user.Id}, {Key: "products"}}
+
+	_, err := coll.InsertOne(context.TODO(), doc)
+	return err
+}
+
+func (ucr UserCartRepo) AddProductToCart(postgresqlRepo postgresql.IProductRepo, up IUsersRepo, userMail, productId, qty string) error {
 	if productId == "" {
 		return errors.New("empty product id")
 	}
 
-	product, getErr := postgresql.GetProduct(productId)
+	product, getErr := postgresqlRepo.GetProduct(productId)
 	if getErr != nil {
 		return getErr
 	}
 
-	user, findErr := FindOneUser(userMail)
+	user, findErr := up.FindOneUser(userMail)
 	if findErr != nil {
 		fmt.Println("mongodb (find): ", findErr)
 		return findErr
@@ -66,22 +94,8 @@ func AddProductToCart(userMail, productId, qty string) error {
 	return nil
 }
 
-func NewCart(userMail string) error {
-	user, findErr := FindOneUser(userMail)
-	if findErr != nil {
-		fmt.Println("mongodb (find): ", findErr)
-		return findErr
-	}
-
-	coll := client.Database("eCommUsers").Collection("carts")
-	doc := bson.D{{Key: "userId", Value: user.Id}, {Key: "products"}}
-
-	_, err := coll.InsertOne(context.TODO(), doc)
-	return err
-}
-
-func FindAllCartProducts(userMail string) (*Cart, error) {
-	user, findErr := FindOneUser(userMail)
+func (ucr UserCartRepo) FindAllCartProducts(up IUsersRepo, userMail string) (*Cart, error) {
+	user, findErr := up.FindOneUser(userMail)
 	if findErr != nil {
 		fmt.Println("mongodb (find):", findErr)
 		return nil, findErr
@@ -98,8 +112,8 @@ func FindAllCartProducts(userMail string) (*Cart, error) {
 	return &result, nil
 }
 
-func RemoveProductFromCart(userMail, productId string) error {
-	cart, findErr := FindAllCartProducts(userMail)
+func (ucr UserCartRepo) RemoveProductFromCart(up IUsersRepo, userMail, productId string) error {
+	cart, findErr := ucr.FindAllCartProducts(up, userMail)
 	if findErr != nil {
 		fmt.Println("mongodb (remove): ", findErr)
 		return findErr
@@ -110,12 +124,12 @@ func RemoveProductFromCart(userMail, productId string) error {
 	copy(cart.Products[i:], cart.Products[i+1:])
 	cart.Products[len(cart.Products)-1] = Product{} // or the zero value of T
 	cart.Products = cart.Products[:len(cart.Products)-1]
-	err := UpdateCartProducts(cart.UserId, cart.Products)
+	err := ucr.UpdateCartProducts(cart.UserId, cart.Products)
 
 	return err
 }
 
-func UpdateCartProducts(userId primitive.ObjectID, newProducts []Product) error {
+func (ucr UserCartRepo) UpdateCartProducts(userId primitive.ObjectID, newProducts []Product) error {
 	coll := client.Database("eCommUsers").Collection("carts")
 	filter := bson.D{{Key: "userId", Value: userId}}
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "products", Value: newProducts}}}}
@@ -124,8 +138,8 @@ func UpdateCartProducts(userId primitive.ObjectID, newProducts []Product) error 
 	return err
 }
 
-func ChangeProductQty(userMail, productId, productQty string) error {
-	cart, findErr := FindAllCartProducts(userMail)
+func (ucr UserCartRepo) ChangeProductQty(up IUsersRepo, userMail, productId, productQty string) error {
+	cart, findErr := ucr.FindAllCartProducts(up, userMail)
 	if findErr != nil {
 		return findErr
 	}
@@ -140,11 +154,11 @@ func ChangeProductQty(userMail, productId, productQty string) error {
 		fmt.Println(newProducts)
 	}
 
-	user, usrErr := FindOneUser(userMail)
+	user, usrErr := up.FindOneUser(userMail)
 	if usrErr != nil {
 		return usrErr
 	}
-	err := UpdateCartProducts(user.Id, newProducts)
+	err := ucr.UpdateCartProducts(user.Id, newProducts)
 	if err != nil {
 		return err
 	}
@@ -152,15 +166,15 @@ func ChangeProductQty(userMail, productId, productQty string) error {
 	return nil
 }
 
-func AddTotalToCart(userMail, totalPrice string) error {
-	cart, findErr := FindAllCartProducts(userMail)
+func (ucr UserCartRepo) AddTotalToCart(up IUsersRepo, userMail, totalPrice string) error {
+	cart, findErr := ucr.FindAllCartProducts(up, userMail)
 	if findErr != nil {
 		return findErr
 	}
 
 	cart.TotalPrice = totalPrice
 
-	user, findErr := FindOneUser(userMail)
+	user, findErr := up.FindOneUser(userMail)
 	if findErr != nil {
 		fmt.Println("mongodb (find):", findErr)
 		return findErr
@@ -173,8 +187,8 @@ func AddTotalToCart(userMail, totalPrice string) error {
 	return err
 }
 
-func GetTotalPrice(userMail string) (string, error) {
-	user, findErr := FindOneUser(userMail)
+func (ucr UserCartRepo) GetTotalPrice(up IUsersRepo, userMail string) (string, error) {
+	user, findErr := up.FindOneUser(userMail)
 	if findErr != nil {
 		fmt.Println("mongodb (find):", findErr)
 		return "", findErr
@@ -190,8 +204,8 @@ func GetTotalPrice(userMail string) (string, error) {
 	return result.TotalPrice, nil
 }
 
-func ClearCart(userMail string) error {
-	user, findErr := FindOneUser(userMail)
+func (ucr UserCartRepo) ClearCart(up IUsersRepo, userMail string) error {
+	user, findErr := up.FindOneUser(userMail)
 	if findErr != nil {
 		return findErr
 	}

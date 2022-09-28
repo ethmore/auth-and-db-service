@@ -14,9 +14,9 @@ type ChangePassword struct {
 	NewPasswordAgain string
 }
 
-func ChangeUserPassword(passBody ChangePassword, email string) error {
+func ChangeUserPassword(ur mongodb.IUsersRepo, passBody ChangePassword, email string) error {
 
-	user, findErr := mongodb.FindOneUser(email)
+	user, findErr := ur.FindOneUser(email)
 	if findErr != nil {
 		return findErr
 	}
@@ -36,7 +36,7 @@ func ChangeUserPassword(passBody ChangePassword, email string) error {
 	newSaltedPassword := passBody.NewPassword + newSalt
 	newHash, _ := bcrypt.HashPassword(newSaltedPassword)
 
-	updateErr := mongodb.ChangeUserPassword(email, newHash)
+	updateErr := ur.ChangeUserPassword(email, newHash)
 	if updateErr != nil {
 		return updateErr
 	}

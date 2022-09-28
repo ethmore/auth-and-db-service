@@ -33,7 +33,7 @@ func Test() gin.HandlerFunc {
 	}
 }
 
-func UserRegisterPostHandler() gin.HandlerFunc {
+func UserRegisterPostHandler(ur mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var userBody services.UserRegisterBody
 		if bodyErr := ctx.ShouldBindBodyWith(&userBody, binding.JSON); bodyErr != nil {
@@ -42,7 +42,7 @@ func UserRegisterPostHandler() gin.HandlerFunc {
 			return
 		}
 
-		if registerErr := services.UserRegister(userBody); registerErr != nil {
+		if registerErr := services.UserRegister(ur, userBody); registerErr != nil {
 			fmt.Println("UserRegister: ", registerErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
@@ -53,16 +53,16 @@ func UserRegisterPostHandler() gin.HandlerFunc {
 	}
 }
 
-func UserLoginPostHandler() gin.HandlerFunc {
+func UserLoginPostHandler(ur mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var userBody services.LoginBody
 		if bodyErr := ctx.ShouldBindBodyWith(&userBody, binding.JSON); bodyErr != nil {
 			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
+			ctx.Status(http.StatusBadRequest)
 			return
 		}
 
-		token, loginErr := services.UserLogin(userBody)
+		token, loginErr := services.UserLogin(ur, userBody)
 		if loginErr != nil {
 			fmt.Println("UserLogin: ", loginErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -74,9 +74,9 @@ func UserLoginPostHandler() gin.HandlerFunc {
 	}
 }
 
-func UserProfile() gin.HandlerFunc {
+func UserProfile(authenticator middleware.IUserAuthenticator) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, err := middleware.UserAuth(ctx)
+		auth, err := authenticator.UserAuth(ctx)
 		if err != nil {
 			fmt.Println("authentication: ", err)
 			ctx.JSON(http.StatusOK, gin.H{"message": err.Error()})
@@ -86,7 +86,7 @@ func UserProfile() gin.HandlerFunc {
 	}
 }
 
-func GetUserInfo() gin.HandlerFunc {
+func GetUserInfo(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var body Body
 		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
@@ -95,14 +95,14 @@ func GetUserInfo() gin.HandlerFunc {
 			return
 		}
 
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth:", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		user, findErr := mongodb.FindOneUser(auth.EMail)
+		user, findErr := ur.FindOneUser(auth.EMail)
 		if findErr != nil {
 			fmt.Println("mongodb (find): ", findErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -113,7 +113,7 @@ func GetUserInfo() gin.HandlerFunc {
 	}
 }
 
-func ChangeUserPassword() gin.HandlerFunc {
+func ChangeUserPassword(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var passBody services.ChangePassword
 		if bodyErr := ctx.ShouldBindBodyWith(&passBody, binding.JSON); bodyErr != nil {
@@ -122,14 +122,14 @@ func ChangeUserPassword() gin.HandlerFunc {
 			return
 		}
 
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth:", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		if changePassErr := services.ChangeUserPassword(passBody, auth.EMail); changePassErr != nil {
+		if changePassErr := services.ChangeUserPassword(ur, passBody, auth.EMail); changePassErr != nil {
 			fmt.Println("ChangeUserPassword:", changePassErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
@@ -140,9 +140,9 @@ func ChangeUserPassword() gin.HandlerFunc {
 	}
 }
 
-func NewUserAddress() gin.HandlerFunc {
+func NewUserAddress(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, uar mongodb.IUserAddressesRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -156,7 +156,7 @@ func NewUserAddress() gin.HandlerFunc {
 			return
 		}
 
-		insertErr := mongodb.InsertUserAddress(auth.EMail, addressBody.Title, addressBody.Name, addressBody.Surname, addressBody.PhoneNumber, addressBody.Province, addressBody.County, addressBody.DetailedAddress)
+		insertErr := uar.InsertUserAddress(ur, auth.EMail, addressBody.Title, addressBody.Name, addressBody.Surname, addressBody.PhoneNumber, addressBody.Province, addressBody.County, addressBody.DetailedAddress)
 		if insertErr != nil {
 			fmt.Println("mongodb (insertAddress): ", insertErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -168,9 +168,9 @@ func NewUserAddress() gin.HandlerFunc {
 	}
 }
 
-func GetUserAddressById() gin.HandlerFunc {
+func GetUserAddressById(authenticator middleware.IUserAuthenticator, uar mongodb.IUserAddressesRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, authErr := middleware.UserAuth(ctx)
+		_, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -184,7 +184,7 @@ func GetUserAddressById() gin.HandlerFunc {
 			return
 		}
 
-		address, getErr := mongodb.FindUserAddress(addressBody.AddressId)
+		address, getErr := uar.FindUserAddress(addressBody.AddressId)
 		if getErr != nil {
 			fmt.Println("mongodb (getAddresses): ", getErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -194,16 +194,16 @@ func GetUserAddressById() gin.HandlerFunc {
 	}
 }
 
-func GetUserAddresses() gin.HandlerFunc {
+func GetUserAddresses(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, uar mongodb.IUserAddressesRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
 			return
 		}
 
-		addresses, getErr := mongodb.FindAllUserAddresses(auth.EMail)
+		addresses, getErr := uar.FindAllUserAddresses(ur, auth.EMail)
 		if getErr != nil {
 			fmt.Println("mongodb (getAddresses): ", getErr)
 			ctx.Status(http.StatusInternalServerError)

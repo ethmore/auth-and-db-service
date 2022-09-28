@@ -32,7 +32,7 @@ type ProductAndSeller struct {
 	Seller    string
 }
 
-func SellerRegisterPostHandler() gin.HandlerFunc {
+func SellerRegisterPostHandler(sellerRepo postgresql.ISellerRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var sellerBody services.SellerRegisterBody
 		if bodyErr := ctx.ShouldBindBodyWith(&sellerBody, binding.JSON); bodyErr != nil {
@@ -41,9 +41,9 @@ func SellerRegisterPostHandler() gin.HandlerFunc {
 			return
 		}
 
-		if registerErr := services.SellerRegister(sellerBody); registerErr != nil {
+		if registerErr := services.SellerRegister(sellerRepo, sellerBody); registerErr != nil {
 			fmt.Println("SellerRegister: ", registerErr)
-			ctx.Status(http.StatusInternalServerError)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": registerErr})
 			return
 		}
 
@@ -52,7 +52,7 @@ func SellerRegisterPostHandler() gin.HandlerFunc {
 	}
 }
 
-func SellerLoginPostHandler() gin.HandlerFunc {
+func SellerLoginPostHandler(sellerRepo postgresql.ISellerRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var sellerBody services.LoginBody
 		if bodyErr := ctx.ShouldBindBodyWith(&sellerBody, binding.JSON); bodyErr != nil {
@@ -61,7 +61,7 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 			return
 		}
 
-		token, loginErr := services.SellerLogin(sellerBody)
+		token, loginErr := services.SellerLogin(sellerRepo, sellerBody)
 		if loginErr != nil {
 			fmt.Println("SellerLogin: ", loginErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -73,10 +73,10 @@ func SellerLoginPostHandler() gin.HandlerFunc {
 	}
 }
 
-func AddProduct() gin.HandlerFunc {
+func AddProduct(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo, sellerRepo postgresql.ISellerRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var requestBody Product
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
@@ -89,7 +89,7 @@ func AddProduct() gin.HandlerFunc {
 			return
 		}
 
-		insertErr := postgresql.InsertProduct(auth.EMail, requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Stock, requestBody.Stock)
+		insertErr := productRepo.InsertProduct(sellerRepo, auth.EMail, requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Stock, requestBody.Stock)
 		if insertErr != nil {
 			fmt.Println("postgresql (insert): ", insertErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -104,7 +104,8 @@ func AddProduct() gin.HandlerFunc {
 			Image:       requestBody.Photo,
 			Stock:       requestBody.Stock,
 		}
-		searchIndexErr := services.AddProductToSearchService(searchBody)
+		searchService := new(services.SearchService)
+		searchIndexErr := searchService.AddProductToSearchService(searchBody)
 		if searchIndexErr != nil {
 			fmt.Println("AddProductToSearchService ", searchIndexErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -116,10 +117,10 @@ func AddProduct() gin.HandlerFunc {
 	}
 }
 
-func EditProduct() gin.HandlerFunc {
+func EditProduct(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var requestBody Product
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
@@ -132,7 +133,7 @@ func EditProduct() gin.HandlerFunc {
 			return
 		}
 
-		updateStmt := postgresql.UpdateProduct(requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Photo, requestBody.Stock, requestBody.Id)
+		updateStmt := productRepo.UpdateProduct(requestBody.Title, requestBody.Price, requestBody.Description, requestBody.Photo, requestBody.Stock, requestBody.Id)
 		if updateStmt != nil {
 			fmt.Println("postgresql (insert): ", updateStmt)
 			ctx.Status(http.StatusInternalServerError)
@@ -145,9 +146,9 @@ func EditProduct() gin.HandlerFunc {
 	}
 }
 
-func GetSellerProducts() gin.HandlerFunc {
+func GetSellerProducts(authenticator middleware.IUserAuthenticator, postgresqlRepo postgresql.IProductRepo, sellerRepo postgresql.ISellerRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("authentication: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -160,7 +161,7 @@ func GetSellerProducts() gin.HandlerFunc {
 			return
 		}
 
-		products, pqErr := postgresql.GetSellerProducts(auth.EMail)
+		products, pqErr := postgresqlRepo.GetSellerProducts(sellerRepo, auth.EMail)
 		if pqErr != nil {
 			fmt.Println("postgresql (get): ", pqErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -170,9 +171,9 @@ func GetSellerProducts() gin.HandlerFunc {
 	}
 }
 
-func DeleteProduct() gin.HandlerFunc {
+func DeleteProduct(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -185,7 +186,7 @@ func DeleteProduct() gin.HandlerFunc {
 			return
 		}
 
-		delErr := postgresql.DeleteProduct(requestBody.Id)
+		delErr := productRepo.DeleteProduct(requestBody.Id)
 		if delErr != nil {
 			fmt.Println("postgresql (delete): ", delErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -197,9 +198,9 @@ func DeleteProduct() gin.HandlerFunc {
 	}
 }
 
-func GetProductsSellers() gin.HandlerFunc {
+func GetProductsSellers(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo, sellerRepo postgresql.ISellerRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, authErr := middleware.UserAuth(ctx)
+		_, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -215,14 +216,14 @@ func GetProductsSellers() gin.HandlerFunc {
 
 		var productSeller []ProductAndSeller
 		for _, j := range requestBody.ProductIDs {
-			product, err := postgresql.GetProduct(j)
+			product, err := productRepo.GetProduct(j)
 			if err != nil {
 				fmt.Println("postgresql (get): ", err)
 				ctx.Status(http.StatusInternalServerError)
 				return
 			}
 
-			seller, err := postgresql.GetSellerNameByID(product.SellerID)
+			seller, err := sellerRepo.GetSellerNameByID(product.SellerID)
 			if err != nil {
 				fmt.Println("postgresql (get-seller): ", err)
 				ctx.Status(http.StatusInternalServerError)
@@ -236,6 +237,6 @@ func GetProductsSellers() gin.HandlerFunc {
 			productSeller = append(productSeller, prodSeller)
 		}
 
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error", "productsAndSellers": productSeller})
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK", "productsAndSellers": productSeller})
 	}
 }

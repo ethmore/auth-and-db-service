@@ -40,9 +40,9 @@ type CartInfo struct {
 	TotalCartPrice string
 }
 
-func AddProductToCart() gin.HandlerFunc {
+func AddProductToCart(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -56,15 +56,15 @@ func AddProductToCart() gin.HandlerFunc {
 			return
 		}
 
-		addErr := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+		addErr := userCartRepo.AddProductToCart(productRepo, ur, auth.EMail, cartRequest.Id, cartRequest.Qty)
 		if addErr == mongo.ErrNoDocuments {
-			if err := mongodb.NewCart(auth.EMail); err != nil {
+			if err := userCartRepo.NewCart(ur, auth.EMail); err != nil {
 				fmt.Println("mongodb (new-cart): ", err)
 				ctx.Status(http.StatusInternalServerError)
 				return
 			}
 
-			err := mongodb.AddProductToCart(auth.EMail, cartRequest.Id, cartRequest.Qty)
+			err := userCartRepo.AddProductToCart(productRepo, ur, auth.EMail, cartRequest.Id, cartRequest.Qty)
 			if err != nil {
 				fmt.Println("mongodb (add-2): ", addErr)
 				ctx.Status(http.StatusInternalServerError)
@@ -84,23 +84,16 @@ func AddProductToCart() gin.HandlerFunc {
 	}
 }
 
-func GetCartInfo() gin.HandlerFunc {
+func GetCartInfo(authenticator middleware.IUserAuthenticator, productRepo postgresql.IProductRepo, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body Body
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		cart, err := mongodb.FindAllCartProducts(auth.EMail)
+		cart, err := userCartRepo.FindAllCartProducts(ur, auth.EMail)
 		if err != nil {
 			fmt.Println("mongodb (find): ", err)
 			ctx.Status(http.StatusInternalServerError)
@@ -109,7 +102,7 @@ func GetCartInfo() gin.HandlerFunc {
 
 		var cartInfo CartInfo
 		for i := 0; i < len(cart.Products); i++ {
-			product, getErr := postgresql.GetProduct(cart.Products[i].Id)
+			product, getErr := productRepo.GetProduct(cart.Products[i].Id)
 			if getErr != nil {
 				fmt.Println("postgresql (get): ", getErr)
 				ctx.Status(http.StatusInternalServerError)
@@ -147,23 +140,16 @@ func GetCartInfo() gin.HandlerFunc {
 	}
 }
 
-func GetCartProducts() gin.HandlerFunc {
+func GetCartProducts(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body Body
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		cart, err := mongodb.FindAllCartProducts(auth.EMail)
+		cart, err := userCartRepo.FindAllCartProducts(ur, auth.EMail)
 		if err != nil {
 			fmt.Println("mongodb (find): ", err)
 			ctx.Status(http.StatusInternalServerError)
@@ -174,9 +160,9 @@ func GetCartProducts() gin.HandlerFunc {
 	}
 }
 
-func RemoveProductFromCart() gin.HandlerFunc {
+func RemoveProductFromCart(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "auth error"})
@@ -190,7 +176,7 @@ func RemoveProductFromCart() gin.HandlerFunc {
 			return
 		}
 
-		removeErr := mongodb.RemoveProductFromCart(auth.EMail, cartReq.Id)
+		removeErr := userCartRepo.RemoveProductFromCart(ur, auth.EMail, cartReq.Id)
 		if removeErr != nil {
 			fmt.Println("mongodb (remove): ", removeErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -201,9 +187,9 @@ func RemoveProductFromCart() gin.HandlerFunc {
 	}
 }
 
-func ChangeProductQty() gin.HandlerFunc {
+func ChangeProductQty(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
@@ -217,7 +203,7 @@ func ChangeProductQty() gin.HandlerFunc {
 			return
 		}
 
-		err := mongodb.ChangeProductQty(auth.EMail, cartReq.Id, cartReq.Qty)
+		err := userCartRepo.ChangeProductQty(ur, auth.EMail, cartReq.Id, cartReq.Qty)
 		if err != nil {
 			fmt.Println("mongodb (update): ", err)
 			ctx.Status(http.StatusInternalServerError)
@@ -228,7 +214,7 @@ func ChangeProductQty() gin.HandlerFunc {
 	}
 }
 
-func AddTotalToCart() gin.HandlerFunc {
+func AddTotalToCart(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var purchaseBody PurchaseBody
 		if bodyErr := ctx.ShouldBindBodyWith(&purchaseBody, binding.JSON); bodyErr != nil {
@@ -237,14 +223,14 @@ func AddTotalToCart() gin.HandlerFunc {
 			return
 		}
 
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		if err := mongodb.AddTotalToCart(auth.EMail, purchaseBody.TotalPrice); err != nil {
+		if err := userCartRepo.AddTotalToCart(ur, auth.EMail, purchaseBody.TotalPrice); err != nil {
 			fmt.Println("add total to cart: ", err)
 			ctx.Status(http.StatusInternalServerError)
 			return
@@ -254,24 +240,16 @@ func AddTotalToCart() gin.HandlerFunc {
 	}
 }
 
-func GetTotalPrice() gin.HandlerFunc {
+func GetTotalPrice(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var body PurchaseBody
-
-		if bodyErr := ctx.ShouldBindBodyWith(&body, binding.JSON); bodyErr != nil {
-			fmt.Println("body: ", bodyErr)
-			ctx.Status(http.StatusInternalServerError)
-			return
-		}
-
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		totalPrice, err := mongodb.GetTotalPrice(auth.EMail)
+		totalPrice, err := userCartRepo.GetTotalPrice(ur, auth.EMail)
 		if err != nil {
 			fmt.Println("add total to cart: ", err)
 			ctx.Status(http.StatusInternalServerError)
@@ -282,16 +260,16 @@ func GetTotalPrice() gin.HandlerFunc {
 	}
 }
 
-func ClearCart() gin.HandlerFunc {
+func ClearCart(authenticator middleware.IUserAuthenticator, ur mongodb.IUsersRepo, userCartRepo mongodb.IUserCartRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		auth, authErr := middleware.UserAuth(ctx)
+		auth, authErr := authenticator.UserAuth(ctx)
 		if authErr != nil {
 			fmt.Println("auth: ", authErr)
 			ctx.Status(http.StatusInternalServerError)
 			return
 		}
 
-		clrErr := mongodb.ClearCart(auth.EMail)
+		clrErr := userCartRepo.ClearCart(ur, auth.EMail)
 		if clrErr != nil {
 			fmt.Println("mongodb (clear): ", clrErr)
 			ctx.Status(http.StatusInternalServerError)

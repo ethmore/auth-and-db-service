@@ -21,15 +21,13 @@ type Authentication struct {
 	Type  string
 }
 
-func UserAuth(c *gin.Context) (*Authentication, error) {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		fmt.Println("Recovered in f", r)
-	// 		fmt.Println("User not logged in")
-	// 		c.JSON(http.StatusOK, gin.H{"message": "loginNeeded"})
-	// 	}
-	// }()
+type IUserAuthenticator interface {
+	UserAuth(c *gin.Context) (*Authentication, error)
+}
 
+type UserAuthenticator struct{}
+
+func (ua *UserAuthenticator) UserAuth(c *gin.Context) (*Authentication, error) {
 	var tokenBody TokenBody
 	if err := c.ShouldBindBodyWith(&tokenBody, binding.JSON); err != nil {
 		log.Printf("%+v", err)

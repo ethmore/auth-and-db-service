@@ -20,28 +20,6 @@ type OrderProduct struct {
 	SellerName string `json:"seller_name"`
 }
 
-// type Address struct {
-// 	Id              string `bson:"_id"`
-// 	Title           string
-// 	Name            string
-// 	Surname         string
-// 	PhoneNumber     string
-// 	Province        string
-// 	County          string
-// 	DetailedAddress string
-// }
-
-// type Order struct {
-// 	Token              string
-// 	Products           []Product_
-// 	TotalPrice         string
-// 	ShipmentAddress    Address
-// 	CardLastFourDigits string
-// 	PaymentStatus      string
-// 	OrderStatus        string
-// 	OrderTime          string
-// }
-
 type Order struct {
 	Token              string
 	ID                 int
@@ -54,7 +32,15 @@ type Order struct {
 	OrderTime          string
 }
 
-func InsertOrder(userID primitive.ObjectID, o Order) (int, error) {
+type IOrderRepo interface {
+	InsertOrder(userID primitive.ObjectID, o Order) (int, error)
+	GetAllOrders(userID string) ([]Order, error)
+	GetAllOrderProducts(orderID int) ([]Product_, error)
+}
+
+type OrderRepo struct{}
+
+func (p *OrderRepo) InsertOrder(userID primitive.ObjectID, o Order) (int, error) {
 	var id int
 	strUserID := userID.Hex()
 	err := db.QueryRow("INSERT INTO orders (user_id, total_price, shipment_address_id, card_last_four_digits, payment_status, order_status, order_time) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id", strUserID, o.TotalPrice, o.ShipmentAddressID, o.CardLastFourDigits, o.PaymentStatus, o.OrderStatus, o.OrderTime).Scan(&id)
@@ -75,7 +61,7 @@ func InsertOrder(userID primitive.ObjectID, o Order) (int, error) {
 	return id, nil
 }
 
-func GetAllOrders(userID string) ([]Order, error) {
+func (p *OrderRepo) GetAllOrders(userID string) ([]Order, error) {
 	rows, err := db.Query("SELECT id, total_price, shipment_address_id, card_last_four_digits, payment_status, order_status, order_time FROM orders WHERE user_id=$1", userID)
 	if err != nil {
 		return nil, err
@@ -99,7 +85,7 @@ func GetAllOrders(userID string) ([]Order, error) {
 	return orders, nil
 }
 
-func GetAllOrderProducts(orderID int) ([]Product_, error) {
+func (p *OrderRepo) GetAllOrderProducts(orderID int) ([]Product_, error) {
 	rows, err := db.Query("SELECT title, qty, price, seller_name FROM order_products WHERE order_id=$1", orderID)
 	if err != nil {
 		return nil, err

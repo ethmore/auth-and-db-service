@@ -17,8 +17,8 @@ type LoginBody struct {
 	Type     string
 }
 
-func UserLogin(userBody LoginBody) (string, error) {
-	user, mongoErr := mongodb.FindOneUser(userBody.Email)
+func UserLogin(ur mongodb.IUsersRepo, userBody LoginBody) (string, error) {
+	user, mongoErr := ur.FindOneUser(userBody.Email)
 	if mongoErr != nil {
 		return "", mongoErr
 	}
@@ -49,8 +49,8 @@ func UserLogin(userBody LoginBody) (string, error) {
 	return tokenString, nil
 }
 
-func SellerLogin(sellerBody LoginBody) (string, error) {
-	seller, pqErr := postgresql.GetSeller(sellerBody.Email)
+func SellerLogin(sellerRepo postgresql.ISellerRepo, sellerBody LoginBody) (string, error) {
+	seller, pqErr := sellerRepo.GetSeller(sellerBody.Email)
 	if pqErr != nil {
 		return "", pqErr
 	}

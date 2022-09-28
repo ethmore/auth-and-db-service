@@ -4,7 +4,6 @@ import (
 	"auth-and-db-service/dotEnv"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -23,7 +22,13 @@ type Message struct {
 	Message string
 }
 
-func AddProductToSearchService(p SearchProduct) error {
+type SearchServiceInterface interface {
+	AddProductToSearchService(p SearchProduct) error
+}
+
+type SearchService struct{}
+
+func (ss *SearchService) AddProductToSearchService(p SearchProduct) error {
 	body, _ := json.Marshal(p)
 	jsonBody := []byte(body)
 	bodyReader := bytes.NewReader(jsonBody)
@@ -55,6 +60,6 @@ func AddProductToSearchService(p SearchProduct) error {
 	if unmarshalErr := json.Unmarshal([]byte(b), &response); err != nil {
 		return unmarshalErr
 	}
-	fmt.Println(response)
+
 	return nil
 }

@@ -22,7 +22,7 @@ type UpdatePayment struct {
 	Status    string
 }
 
-func CreatePayment() gin.HandlerFunc {
+func CreatePayment(paymentRepo postgresql.IPaymentRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var body PaymentBody
 		if err := ctx.ShouldBindBodyWith(&body, binding.JSON); err != nil {
@@ -31,7 +31,7 @@ func CreatePayment() gin.HandlerFunc {
 			return
 		}
 
-		paymentID, err := postgresql.InsertPayment(body.BuyerID, body.AddressID, body.TotalPrice)
+		paymentID, err := paymentRepo.InsertPayment(body.BuyerID, body.AddressID, body.TotalPrice)
 		if err != nil {
 			fmt.Println("posgresql (insert): ", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -42,7 +42,7 @@ func CreatePayment() gin.HandlerFunc {
 	}
 }
 
-func UpdatePaymentStatus() gin.HandlerFunc {
+func UpdatePaymentStatus(paymentRepo postgresql.IPaymentRepo) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var payment UpdatePayment
 		if err := ctx.ShouldBindBodyWith(&payment, binding.JSON); err != nil {
@@ -51,7 +51,7 @@ func UpdatePaymentStatus() gin.HandlerFunc {
 			return
 		}
 
-		updateErr := postgresql.UpdatePaymentStatus(payment.Status, payment.PaymentID)
+		updateErr := paymentRepo.UpdatePaymentStatus(payment.Status, payment.PaymentID)
 		if updateErr != nil {
 			fmt.Println("posgresql (update payment status): ", updateErr)
 			ctx.JSON(http.StatusInternalServerError, gin.H{})
