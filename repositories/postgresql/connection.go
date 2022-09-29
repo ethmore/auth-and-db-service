@@ -10,10 +10,14 @@ import (
 	"auth-and-db-service/dotEnv"
 
 	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var db *sql.DB
+var db2 *gorm.DB
 var err error
+var err2 error
 
 var lock = &sync.Mutex{}
 var singleInstance *single
@@ -33,6 +37,7 @@ func Connect() *single {
 			dbname := dotEnv.GoDotEnvVariable("DBNAME")
 			intPort, _ := strconv.Atoi(port)
 			psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, intPort, user, password, dbname)
+			db2, err2 = gorm.Open(postgres.Open(psqlconn), &gorm.Config{})
 
 			db, err = sql.Open("postgres", psqlconn)
 			if err != nil {

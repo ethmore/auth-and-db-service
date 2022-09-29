@@ -1,19 +1,20 @@
 package postgresql
 
 import (
-	"database/sql"
 	"errors"
+	"strconv"
 
 	_ "github.com/lib/pq"
+	"gorm.io/gorm"
 )
 
 type Seller struct {
 	Id          int
-	CompanyName string
+	CompanyName string `gorm:"column:name"`
 	Email       string
 	Password    string
 	Address     string
-	PhoneNumber string
+	PhoneNumber string `gorm:"column:phonenumber"`
 }
 
 type SellerName struct {
@@ -32,48 +33,47 @@ type ISellerRepo interface {
 type SellerRepo struct{}
 
 func (s *SellerRepo) Insert(name, email, password, address, phonenumber string) error {
-	insertDynStmt := `INSERT INTO sellers (name, email, password, address, phonenumber) values($1, $2, $3, $4, $5)`
-	_, err := db.Exec(insertDynStmt, name, email, password, address, phonenumber)
-	return err
+	tx := db2.Create(&Seller{CompanyName: name, Email: email, Password: password, Address: address, PhoneNumber: phonenumber})
+	return tx.Error
 }
 
 func (s *SellerRepo) Update(name, email, password, address, phonenumber, id string) error {
-	updateStmt := `update "sellers" set "name"=$1, "email"=$2, "password"=$3, "address"=$4, "phonenumber"=$5 where "id"=$6`
-	_, err := db.Exec(updateStmt, name, email, password, address, phonenumber, id)
-	return err
+	intID, _ := strconv.Atoi(id)
+	var seller = Seller{
+		Id: intID,
+	}
+	tx := db2.Model(&seller).Updates(Seller{CompanyName: name, Email: email, Password: password, Address: address, PhoneNumber: phonenumber})
+	return tx.Error
 }
 
 func (s *SellerRepo) Delete(id string) error {
-	deleteStmt := `delete from "sellers" where id=$1`
-	_, err := db.Exec(deleteStmt, id)
-	return err
+	tx := db2.Delete(&Seller{}, id)
+	return tx.Error
 }
 
 func (s *SellerRepo) GetSeller(email string) (*Seller, error) {
-	var seller Seller
-
 	if email == "" {
 		return nil, errors.New("email cannot be empty")
 	}
 
-	err := db.QueryRow("SELECT id, email, password FROM sellers WHERE email=$1", email).Scan(&seller.Id, &seller.Email, &seller.Password)
+	var seller Seller
+	tx := db2.Model(&Seller{}).Select("id", "email", "password").Where("email = ?", email).First(&seller)
 
-	if err != nil && err != sql.ErrNoRows {
+	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 	return &seller, nil
 }
 
 func (s *SellerRepo) GetSellerNameByID(id string) (*SellerName, error) {
-	var seller SellerName
-
 	if id == "" {
 		return nil, errors.New("id cannot be empty")
 	}
 
-	err := db.QueryRow("SELECT id, name FROM sellers WHERE id=$1", id).Scan(&seller.Id, &seller.CompanyName)
+	var seller SellerName
+	tx := db2.Model(&Seller{}).Select("id", "name").Where("id = ?", id).First(&seller)
 
-	if err != nil && err != sql.ErrNoRows {
+	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 	return &seller, nil

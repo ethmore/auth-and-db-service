@@ -10,9 +10,9 @@ type Product struct {
 	Title       string
 	Price       string
 	Description string
-	Image       string
+	Image       string `gorm:"column:photo"`
 	Stock       string
-	SellerID    string
+	SellerID    string `gorm:"column:sellerid"`
 }
 
 type IProductRepo interface {
@@ -33,9 +33,9 @@ func (p *ProductRepo) InsertProduct(sr ISellerRepo, sellerMail, title, price, de
 	}
 
 	if seller.Id != 0 {
-		insertStmt := `INSERT INTO products (sellerid, title, price, description, photo, stock) values ($1, $2, $3, $4, $5, $6)`
-		_, err := db.Exec(insertStmt, seller.Id, title, price, description, photo, stock)
-		return err
+		strSellerID := strconv.Itoa(seller.Id)
+		tx := db2.Create(&Product{SellerID: strSellerID, Title: title, Price: price, Description: description, Image: photo, Stock: stock})
+		return tx.Error
 	} else {
 		err := errors.New("postgressql: Insert id is empty")
 		return err
@@ -43,15 +43,16 @@ func (p *ProductRepo) InsertProduct(sr ISellerRepo, sellerMail, title, price, de
 }
 
 func (p *ProductRepo) UpdateProduct(title, price, description, photo, stock, id string) error {
-	updateStmt := `update "products" set "title"=$1, "price"=$2, "description"=$3, "photo"=$4, "stock"=$5 where id=$6`
-	_, err := db.Exec(updateStmt, title, price, description, photo, stock, id)
-	return err
+	product := Product{
+		Id: id,
+	}
+	tx := db2.Model(&product).Updates(Product{Title: title, Price: price, Description: description, Image: photo, Stock: stock})
+	return tx.Error
 }
 
 func (p *ProductRepo) DeleteProduct(id string) error {
-	deleteStmt := `delete from "products" where id=$1`
-	_, err := db.Exec(deleteStmt, id)
-	return err
+	tx := db2.Delete(&Product{}, id)
+	return tx.Error
 }
 
 func (p *ProductRepo) GetSellerProducts(sr ISellerRepo, eMail string) ([]Product, error) {
@@ -60,65 +61,34 @@ func (p *ProductRepo) GetSellerProducts(sr ISellerRepo, eMail string) ([]Product
 		return nil, err
 	}
 
-	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products WHERE sellerid=$1", seller.Id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var products []Product
-
-	for rows.Next() {
-		var product Product
-		err := rows.Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
-		if err != nil {
-			return nil, err
-		}
-
-		products = append(products, product)
+	tx := db2.Model(&Product{}).Select("id", "title", "price", "description", "photo", "stock").Where("sellerid = ?", seller.Id).Find(&products)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return products, nil
 }
 
 func (p *ProductRepo) GetAllProducts() ([]Product, error) {
-	rows, err := db.Query("SELECT id, title, price, description, photo, stock FROM products")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var products []Product
-
-	for rows.Next() {
-		var product Product
-		err := rows.Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock)
-		if err != nil {
-			return nil, err
-		}
-
-		products = append(products, product)
+	tx := db2.Model(&Product{}).Select("id", "title", "price", "description", "photo", "stock").Find(&products)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return products, nil
 }
 
 func (p *ProductRepo) GetProduct(id string) (*Product, error) {
 	var product Product
-	idInt, _ := strconv.Atoi(id)
-
-	err := db.QueryRow("SELECT id, title, price, description, photo, stock, sellerid FROM products WHERE id=$1", idInt).Scan(&product.Id, &product.Title, &product.Price, &product.Description, &product.Image, &product.Stock, &product.SellerID)
-	if err != nil {
-		return nil, err
+	tx := db2.Model(&Product{}).Where("id = ?", id).Find(&product)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
-
 	return &product, nil
+}
+
+func T() {
+	sr := &PaymentRepo{}
+	// sr.InsertPayment("26", "2342", "12345")
+	sr.UpdatePaymentStatus("success", 139)
 }

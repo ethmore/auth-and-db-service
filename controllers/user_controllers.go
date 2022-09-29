@@ -6,6 +6,7 @@ import (
 
 	"auth-and-db-service/middleware"
 	"auth-and-db-service/repositories/mongodb"
+	"auth-and-db-service/repositories/postgresql"
 	"auth-and-db-service/services"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,7 @@ type PaymentAddress struct {
 
 func Test() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		postgresql.T()
 		ctx.JSON(http.StatusOK, gin.H{"message": "OK"})
 	}
 }

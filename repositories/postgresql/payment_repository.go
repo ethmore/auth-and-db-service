@@ -1,5 +1,13 @@
 package postgresql
 
+type Payment struct {
+	ID         int
+	BuyerID    string `gorm:"column:buyer_id"`
+	AddressID  string `gorm:"column:address_id"`
+	TotalPrice string `gorm:"column:total_price"`
+	Status     string
+}
+
 type IPaymentRepo interface {
 	InsertPayment(buyerId, addressId, totalPrice string) (int, error)
 	UpdatePaymentStatus(status string, paymentID int) error
@@ -8,19 +16,26 @@ type IPaymentRepo interface {
 type PaymentRepo struct{}
 
 func (p *PaymentRepo) InsertPayment(buyerId, addressId, totalPrice string) (int, error) {
-	var id int
-	err := db.QueryRow("INSERT INTO payments (buyer_id, address_id, total_price) VALUES ($1, $2, $3) RETURNING id", buyerId, addressId, totalPrice).Scan(&id)
-	if err != nil {
-		return 0, err
+	payment := Payment{
+		BuyerID:    buyerId,
+		AddressID:  addressId,
+		TotalPrice: totalPrice,
 	}
-	return id, nil
+	result := db2.Create(&payment)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return payment.ID, nil
 }
 
 func (p *PaymentRepo) UpdatePaymentStatus(status string, paymentID int) error {
-	updateStmt := `UPDATE payments SET "status"=$1 WHERE id=$2`
-	_, err := db.Exec(updateStmt, status, paymentID)
-	if err != nil {
-		return err
+	payment := Payment{
+		ID: paymentID,
+	}
+	result := db2.Model(&payment).Update("Status", status)
+	if result.Error != nil {
+		return result.Error
 	}
 	return nil
 }
