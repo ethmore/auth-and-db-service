@@ -1,4 +1,4 @@
-Authentication and Database Service
+Authentication Service
 ===
 
 This GO project serves as a microservice for [eCommerce](https://github.com/users/ethmore/projects/4) project.
